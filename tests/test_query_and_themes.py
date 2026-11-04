@@ -54,3 +54,9 @@ def test_citation_check_removes_invalid():
     assert out["invalid_citations"] == [9]
     assert "[R9]" not in out["answer"]
     assert check_citations("Texto sem citação.", 3)["uncited_answer"]
+
+
+def test_citation_check_accepts_grouped_citations():
+    out = check_citations("Atrasos frequentes [R1, R2] e [R3; R12].", n_evidences=3)
+    assert out["cited"] == [1, 2, 3] and out["invalid_citations"] == [12]
+    assert not out["uncited_answer"]

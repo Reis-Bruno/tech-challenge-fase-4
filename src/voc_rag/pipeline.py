@@ -9,7 +9,7 @@ import time
 from dataclasses import asdict, dataclass, field
 
 from . import config
-from .generation import (SYSTEM_PROMPT, build_context, build_user_prompt, call_llm,
+from .generation import (LAST_MODEL_USED, SYSTEM_PROMPT, build_context, build_user_prompt, call_llm,
                          check_citations, extractive_answer, refusal_answer)
 from .query import Filters, QueryPlan, plan_query
 from .retriever import Evidence, HybridRetriever, RetrievalResult
@@ -74,7 +74,7 @@ class VoCPipeline:
             try:
                 answer = call_llm(SYSTEM_PROMPT, build_user_prompt(question, context),
                                   self.provider, self.model)
-                generator = f"llm:{self.provider}"
+                generator = f"llm:{self.provider}/{LAST_MODEL_USED.get(self.provider, '?')}"
             except Exception as exc:  # falha do provedor não derruba a aplicação
                 answer = (extractive_answer(plan, result)
                           + f"\n\n(Aviso: falha ao chamar o LLM — {type(exc).__name__}: {exc}. "

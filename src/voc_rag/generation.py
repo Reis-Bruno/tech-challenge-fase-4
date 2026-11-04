@@ -82,22 +82,41 @@ def build_user_prompt(question: str, context: str) -> str:
 # ---------------------------------------------------------------------------------------
 # Provedores de LLM
 # ---------------------------------------------------------------------------------------
+LAST_MODEL_USED: dict = {}
+
+
+def _is_transient(exc: Exception) -> bool:
+    msg = str(exc)
+    return any(code in msg for code in ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE"))
+
+
 def call_llm(system: str, user: str, provider: str | None = None, model: str | None = None,
-             retries: int = 3) -> str:
-    """Chama o LLM com novas tentativas (backoff 2s, 4s, 8s) para erros transitórios —
-    ex.: limite de requisições por minuto da camada gratuita do Gemini (HTTP 429/503)."""
+             retries: int = 2) -> str:
+    """Chama o LLM com tolerância a falhas transitórias.
+
+    Para cada modelo (principal + reservas de ``config.FALLBACK_MODELS``) faz até
+    ``retries`` novas tentativas com backoff (2 s, 4 s) em erros 429/503 — comuns na camada
+    gratuita do Gemini em horários de pico — e então passa para o próximo modelo.
+    """
     import time
 
-    for attempt in range(retries + 1):
-        try:
-            return _call_llm_once(system, user, provider, model)
-        except Exception as exc:
-            msg = str(exc)
-            transient = any(code in msg for code in ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE"))
-            if not transient or attempt == retries:
-                raise
-            time.sleep(2 ** (attempt + 1))
-    raise RuntimeError("unreachable")
+    provider = (provider or config.LLM_PROVIDER).lower()
+    primary = model or config.LLM_MODEL or config.DEFAULT_MODELS.get(provider, "")
+    candidates = [primary] + [m for m in config.FALLBACK_MODELS.get(provider, []) if m != primary]
+    last_exc: Exception | None = None
+    for m in candidates:
+        for attempt in range(retries + 1):
+            try:
+                text = _call_llm_once(system, user, provider, m)
+                LAST_MODEL_USED[provider] = m
+                return text
+            except Exception as exc:
+                if not _is_transient(exc):
+                    raise
+                last_exc = exc
+                if attempt < retries:
+                    time.sleep(2 ** (attempt + 1))
+    raise last_exc  # type: ignore[misc]
 
 
 def _call_llm_once(system: str, user: str, provider: str | None = None,
@@ -189,7 +208,19 @@ def refusal_answer(result: RetrievalResult) -> str:
 _CIT = re.compile(r"\[R(\d+)\]")
 
 
+_GROUP = re.compile(r"\[(R\d+(?:\s*[,;]\s*R?\d+)+)\]")
+
+
+def _split_groups(answer: str) -> str:
+    """Normaliza citações agrupadas: "[R1, R2]" -> "[R1] [R2]"."""
+    def repl(m: re.Match) -> str:
+        ids = re.findall(r"\d+", m.group(1))
+        return " ".join(f"[R{i}]" for i in ids)
+    return _GROUP.sub(repl, answer)
+
+
 def check_citations(answer: str, n_evidences: int) -> dict:
+    answer = _split_groups(answer)
     cited = {int(x) for x in _CIT.findall(answer)}
     invalid = sorted(c for c in cited if c < 1 or c > n_evidences)
     for c in invalid:  # remove citações inventadas pelo modelo

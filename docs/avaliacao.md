@@ -1,6 +1,6 @@
 # Avaliação automática
 
-Backend de embeddings: `lsa` · gerador(es): `extrativo, guardrail`
+Backend de embeddings: `lsa` · gerador(es): `guardrail, llm:gemini/gemini-3.5-flash, llm:gemini/gemini-3.5-flash-lite`
 
 Gerado por `python eval/run_eval.py`.
 
@@ -13,7 +13,7 @@ Gerado por `python eval/run_eval.py`.
 | filter_compliance | 1.0 |
 | answers_with_invalid_citations | 0 |
 | answers_without_citation | 0 |
-| mean_latency_ms | 220 |
+| mean_latency_ms | 9413 |
 
 ## Por pergunta
 

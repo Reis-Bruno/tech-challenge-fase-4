@@ -139,12 +139,12 @@ PYTHONPATH=src python -m voc_rag.cli "O que elogiam?" --categoria beleza_saude -
 echo "GEMINI_API_KEY=sua-chave-aqui" >> .env
 ```
 
-Com `GEMINI_API_KEY` definida, o projeto usa `gemini-2.5-flash` automaticamente. Sem chave, cai
+Com `GEMINI_API_KEY` definida, o projeto usa `gemini-3.5-flash` automaticamente. Sem chave, cai
 no modo extrativo. Outros provedores (variável `VOC_LLM_PROVIDER`, opção `--provider` ou seletor na interface):
 
 | Valor | Requer | Observação |
 |---|---|---|
-| `gemini` (padrão) | `GEMINI_API_KEY` | `gemini-2.5-flash`; camada gratuita suficiente para a demo (há nova tentativa automática em caso de limite de requisições) |
+| `gemini` (padrão) | `GEMINI_API_KEY` | `gemini-3.5-flash`; camada gratuita suficiente para a demo (novas tentativas e modelo reserva `gemini-3.5-flash-lite` em caso de sobrecarga) |
 | `none` | nada | resposta **extrativa**: agrupa as evidências por tema e cita os trechos; não escreve conclusões novas |
 | `openai` | `OPENAI_API_KEY` | padrão `gpt-4o-mini` |
 | `anthropic` | `ANTHROPIC_API_KEY` | padrão `claude-haiku-5-5` |
@@ -311,7 +311,10 @@ evidências na interface), MMR λ = 0,7, mínimo de 3 evidências, limiar denso 
 - **Conformidade de filtros**: evidências que respeitam os filtros aplicados.
 - **Citações inválidas / respostas sem citação** (com LLM).
 
-Resultado com o backend **LSA** e o gerador **extrativo** (a configuração que roda sem internet): guardrail 18/18, precisão@k proxy média 0,97, filtros 100%, latência média ~0,2 s por pergunta. Detalhes por pergunta em [`docs/avaliacao.md`](docs/avaliacao.md).
+Resultado com embeddings **LSA** e gerador **Gemini (`gemini-3.5-flash`)**: guardrail 18/18,
+precisão@k proxy média 0,97, filtros 100%, **0 citações inválidas e 0 respostas sem citação**
+nas 12 respostas geradas, latência média ~9 s por pergunta (quase toda no LLM; a recuperação
+leva < 1 s após o aquecimento). No modo extrativo (sem LLM), a mesma recuperação responde em ~0,2 s. Detalhes por pergunta em [`docs/avaliacao.md`](docs/avaliacao.md).
 
 > **Leia esses números com ceticismo.** O conjunto é pequeno (18 perguntas), foi escrito pela própria equipe e várias perguntas foram usadas durante o desenvolvimento para ajustar regras e limiares. Há, portanto, risco real de sobreajuste. O proxy de precisão mede se a evidência *fala do assunto*, não se ela *sustenta a conclusão*. Antes de qualquer conclusão de negócio, o próximo passo é avaliar com perguntas novas, escritas por quem não desenvolveu o sistema, e rotulagem humana de relevância. Rode `python eval/run_eval.py` de novo após indexar com `fastembed` e após configurar um LLM: o limiar denso do fastembed (0,45) é um ponto de partida e deve ser recalibrado com esse script.
 
@@ -319,20 +322,23 @@ Resultado com o backend **LSA** e o gerador **extrativo** (a configuração que 
 
 ## 9. Exemplos de perguntas e respostas
 
-Todas as respostas de exemplo, com as tabelas de evidências, estão em [`docs/exemplos.md`](docs/exemplos.md) (geradas por `eval/run_eval.py`, backend LSA, gerador extrativo). Trechos:
+Todas as respostas de exemplo, com as tabelas de evidências, estão em [`docs/exemplos.md`](docs/exemplos.md) (geradas por `eval/run_eval.py --provider gemini`, embeddings LSA). Trecho:
 
 **"Quais são os principais problemas relatados pelos clientes em suas avaliações?"**
 modo `amplo` · filtro inferido nota 1–3 · 14.438 avaliações
 
 ```text
-Resumo: nas 14438 avaliações analisadas (nota 1–3), os temas mais citados são: produto não
-recebido (até a data da avaliação) (26.6%), atraso / demora na entrega (13.1%), troca,
-devolução, cancelamento ou reembolso (12.1%).
-- Produto não recebido (até a data da avaliação) [R1] [R2]
-    • "PRODUTO NÃO RECEBIDO" [R1]
-- Atraso / demora na entrega [R3] [R4]
-    • "Demora na entrega e ainda atrasou." [R3]
-...
+Os principais problemas relatados pelos clientes com notas entre 1 e 3 referem-se à não entrega
+e ao atraso nos pedidos, seguidos por solicitações de troca/cancelamento e recebimento de
+produtos errados ou divergentes. [...]
+* Produto não recebido (26,6% / 3.845 menções nas estatísticas): [...] os clientes afirmam
+  categoricamente que não receberam a mercadoria comprada [R1], [R2].
+* Atraso / demora na entrega (13,1% / 1.896 menções nas estatísticas): [...] [R3], [R4].
+* Troca, devolução, cancelamento ou reembolso (12,1%): [...] [R5], [R6].
+* Produto errado / diferente do anunciado (8,1%): [...] conectores incompatíveis com o
+  aparelho [...] [R7], [R8].
+Limitações: A análise qualitativa apoia-se em uma amostra de 8 avaliações individuais e em
+contagens por palavras-chave restritas a avaliações com nota de 1 a 3.
 ```
 
 **"Qual foi o faturamento da Olist em 2018?"** → recusada:
@@ -347,7 +353,8 @@ dados transacionais/financeiros agregados, que não estão nos textos das avalia
 
 ## 10. Limitações conhecidas e próximos passos
 
-- **Os exemplos e a avaliação publicados usam o backend LSA e o modo extrativo.** O ambiente de desenvolvimento não tinha acesso ao HuggingFace nem a APIs de LLM. O caminho `fastembed` + LLM está implementado (e o fluxo do LLM foi testado com um modelo simulado, incluindo a remoção de citações inválidas), mas os números com ele precisam ser gerados localmente (seção 8).
+- **Os exemplos e a avaliação publicados usam embeddings LSA**, não o modelo neural padrão: o ambiente de desenvolvimento não tinha acesso ao HuggingFace. A geração já usa o Gemini real. Após indexar com `fastembed`, rode `python eval/run_eval.py --provider gemini` de novo e recalibre o limiar denso (0,45 é um ponto de partida).
+- **Disponibilidade do Gemini**: na camada gratuita, os modelos mais novos (ex.: `gemini-3.8-flash`) devolveram 503 por alta demanda durante os testes. Por isso o padrão é `gemini-3.5-flash`, com novas tentativas e troca automática para `gemini-3.5-flash-lite`. O modelo efetivamente usado aparece no campo "Gerador".
 - **Taxonomia de temas por palavras-chave**: cerca de 39% das avaliações não casam com nenhum tema, e negações distantes ("não achei que fosse chegar tão rápido") podem confundir os padrões. Os percentuais são estimativas de piso, e a interface deixa isso explícito. Próximo passo: descobrir temas por clustering de embeddings (ex.: BERTopic) e classificar com LLM numa amostra para medir precisão e recall dos padrões.
 - **"Produto não recebido" ≠ "nunca entregue"**: muitas avaliações são escritas antes da entrega. Entre as 3.809 avaliações de pedidos que *foram entregues, com atraso*, 45,9% dizem algo como "não recebi". O rótulo do tema deixa isso claro ("até a data da avaliação"), e o metadado `delivery_status` mostra o que de fato aconteceu.
 - **Regras de consulta em português** cobrem os padrões de pergunta mais comuns. Perguntas muito diferentes podem não acionar filtros (o usuário pode aplicá-los manualmente). Uma evolução é usar um LLM para extrair filtros num JSON validado contra o esquema, mantendo as regras como fallback.

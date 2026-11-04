@@ -36,9 +36,14 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
 DEFAULT_MODELS = {
     "openai": "gpt-4o-mini",
-    "gemini": "gemini-2.5-flash",
+    "gemini": "gemini-3.5-flash",
     "anthropic": "claude-haiku-5-5",
     "ollama": "llama3.1:8b",
+}
+
+# Modelos reserva: usados quando o principal está sobrecarregado (HTTP 503/429).
+FALLBACK_MODELS = {
+    "gemini": ["gemini-3.5-flash-lite"],
 }
 
 
