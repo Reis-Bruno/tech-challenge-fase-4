@@ -1,0 +1,12 @@
+[project]
+name = "voc-rag"
+version = "1.0.0"
+description = "Voice of Customer Intelligence com RAG sobre avaliações do Olist"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
