@@ -27,14 +27,16 @@ FASTEMBED_MODEL = os.getenv(
 )
 
 # LLM: openai | gemini | anthropic | ollama | none (modo extrativo, sem LLM)
-LLM_PROVIDER = os.getenv("VOC_LLM_PROVIDER", "none").lower()
+# Padrão: Gemini quando houver chave no ambiente; caso contrário, modo extrativo.
+_HAS_GEMINI_KEY = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+LLM_PROVIDER = os.getenv("VOC_LLM_PROVIDER", "gemini" if _HAS_GEMINI_KEY else "none").lower()
 LLM_MODEL = os.getenv("VOC_LLM_MODEL", "")
 LLM_TEMPERATURE = float(os.getenv("VOC_LLM_TEMPERATURE", "0.1"))
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
 DEFAULT_MODELS = {
     "openai": "gpt-4o-mini",
-    "gemini": "gemini-2.0-flash",
+    "gemini": "gemini-2.5-flash",
     "anthropic": "claude-haiku-5-5",
     "ollama": "llama3.1:8b",
 }

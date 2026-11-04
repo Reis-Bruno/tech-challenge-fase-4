@@ -82,7 +82,26 @@ def build_user_prompt(question: str, context: str) -> str:
 # ---------------------------------------------------------------------------------------
 # Provedores de LLM
 # ---------------------------------------------------------------------------------------
-def call_llm(system: str, user: str, provider: str | None = None, model: str | None = None) -> str:
+def call_llm(system: str, user: str, provider: str | None = None, model: str | None = None,
+             retries: int = 3) -> str:
+    """Chama o LLM com novas tentativas (backoff 2s, 4s, 8s) para erros transitórios —
+    ex.: limite de requisições por minuto da camada gratuita do Gemini (HTTP 429/503)."""
+    import time
+
+    for attempt in range(retries + 1):
+        try:
+            return _call_llm_once(system, user, provider, model)
+        except Exception as exc:
+            msg = str(exc)
+            transient = any(code in msg for code in ("429", "503", "RESOURCE_EXHAUSTED", "UNAVAILABLE"))
+            if not transient or attempt == retries:
+                raise
+            time.sleep(2 ** (attempt + 1))
+    raise RuntimeError("unreachable")
+
+
+def _call_llm_once(system: str, user: str, provider: str | None = None,
+                   model: str | None = None) -> str:
     provider = (provider or config.LLM_PROVIDER).lower()
     model = model or config.LLM_MODEL or config.DEFAULT_MODELS.get(provider, "")
     temp = config.LLM_TEMPERATURE
@@ -104,7 +123,10 @@ def call_llm(system: str, user: str, provider: str | None = None, model: str | N
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
+        key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not key:
+            raise RuntimeError("GEMINI_API_KEY não definida (crie em https://aistudio.google.com/apikey)")
+        client = genai.Client(api_key=key)
         resp = client.models.generate_content(
             model=model, contents=user,
             config=types.GenerateContentConfig(system_instruction=system, temperature=temp),

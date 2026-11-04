@@ -132,13 +132,21 @@ PYTHONPATH=src python -m voc_rag.cli "O que os clientes relatam sobre problemas 
 PYTHONPATH=src python -m voc_rag.cli "O que elogiam?" --categoria beleza_saude --ano 2018 --provider openai
 ```
 
-**Escolha do gerador** (variável `VOC_LLM_PROVIDER` no `.env`, ou `--provider`, ou seletor na interface):
+**Configurar o LLM (Gemini, padrão do projeto)**: crie uma chave gratuita em
+<https://aistudio.google.com/apikey> e coloque-a no `.env`:
+
+```bash
+echo "GEMINI_API_KEY=sua-chave-aqui" >> .env
+```
+
+Com `GEMINI_API_KEY` definida, o projeto usa `gemini-2.5-flash` automaticamente. Sem chave, cai
+no modo extrativo. Outros provedores (variável `VOC_LLM_PROVIDER`, opção `--provider` ou seletor na interface):
 
 | Valor | Requer | Observação |
 |---|---|---|
-| `none` (padrão) | nada | resposta **extrativa**: agrupa as evidências por tema e cita os trechos; não escreve conclusões novas |
+| `gemini` (padrão) | `GEMINI_API_KEY` | `gemini-2.5-flash`; camada gratuita suficiente para a demo (há nova tentativa automática em caso de limite de requisições) |
+| `none` | nada | resposta **extrativa**: agrupa as evidências por tema e cita os trechos; não escreve conclusões novas |
 | `openai` | `OPENAI_API_KEY` | padrão `gpt-4o-mini` |
-| `gemini` | `GEMINI_API_KEY` | padrão `gemini-2.0-flash` (tem camada gratuita) |
 | `anthropic` | `ANTHROPIC_API_KEY` | padrão `claude-haiku-5-5` |
 | `ollama` | Ollama rodando local | padrão `llama3.1:8b`, sem custo e sem enviar dados para fora |
 
