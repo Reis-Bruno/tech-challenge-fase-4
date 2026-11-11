@@ -160,7 +160,7 @@ python eval/ablation.py
 ```
 
 O notebook [`notebooks/demonstracao_pipeline.ipynb`](notebooks/demonstracao_pipeline.ipynb)
-percorre as etapas do pipeline. Execute-o depois de construir a base e os índices.
+mostra as etapas do pipeline com as saídas já executadas.
 
 ## 4. Base de conhecimento
 
