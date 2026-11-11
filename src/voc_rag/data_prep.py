@@ -60,6 +60,34 @@ def _main_category(items: pd.DataFrame, products: pd.DataFrame) -> pd.DataFrame:
     return agg.reset_index()
 
 
+def integrity_checks(reviews: pd.DataFrame, orders: pd.DataFrame, items: pd.DataFrame,
+                     products: pd.DataFrame, customers: pd.DataFrame) -> dict:
+    """Verificações de integridade feitas ANTES de qualquer transformação.
+
+    Servem para (a) confirmar que os joins de enriquecimento não perdem nem multiplicam
+    avaliações e (b) detectar leitura incorreta do CSV. Os comentários contêm quebras de
+    linha dentro de campos entre aspas; um leitor que não trate isso desalinha as colunas
+    e produz notas fora de 1–5. O pandas trata o caso corretamente, e a checagem
+    `scores_fora_de_1_a_5` comprova.
+    """
+    msg = reviews["review_comment_message"].dropna().astype(str)
+    reviews_per_order = reviews.groupby("order_id")["review_id"].nunique()
+    orders_per_review = reviews.groupby("review_id")["order_id"].nunique()
+    items_per_order = items.groupby("order_id")["order_item_id"].count()
+    return {
+        "avaliacoes_sem_pedido": int((~reviews["order_id"].isin(orders["order_id"])).sum()),
+        "pedidos_sem_cliente": int((~orders["customer_id"].isin(customers["customer_id"])).sum()),
+        "itens_sem_produto": int((~items["product_id"].isin(products["product_id"])).sum()),
+        "pedidos_sem_itens": int((~orders["order_id"].isin(items["order_id"])).sum()),
+        "scores_fora_de_1_a_5": int((~reviews["review_score"].isin([1, 2, 3, 4, 5])).sum()),
+        "comentarios_com_quebra_de_linha": int(msg.str.contains(r"[\r\n]").sum()),
+        "review_ids_em_mais_de_um_pedido": int((orders_per_review > 1).sum()),
+        "pedidos_com_mais_de_uma_avaliacao": int((reviews_per_order > 1).sum()),
+        "pedidos_com_mais_de_um_item": int((items_per_order > 1).sum()),
+        "produtos_sem_categoria": int(products["product_category_name"].isna().sum()),
+    }
+
+
 def build_documents() -> tuple[pd.DataFrame, dict]:
     reviews = _read("reviews")
     orders = _read("orders")
@@ -67,7 +95,8 @@ def build_documents() -> tuple[pd.DataFrame, dict]:
     products = _read("products")
     customers = _read("customers")
 
-    report: dict = {"total_reviews": int(len(reviews))}
+    report: dict = {"total_reviews": int(len(reviews)),
+                    "integrity": integrity_checks(reviews, orders, items, products, customers)}
 
     # --- Seleção: só avaliações com algum texto (título ou comentário) -----------------
     reviews["title"] = reviews["review_comment_title"].map(clean_review_text)
@@ -151,6 +180,8 @@ def build_documents() -> tuple[pd.DataFrame, dict]:
         "category", "category_en", "customer_state", "n_items", "order_value", "n_chars",
     ]
     df = df[cols].reset_index(drop=True)
+    # O enriquecimento não pode multiplicar nem perder avaliações (1 linha por review_id).
+    assert df["review_id"].is_unique, "join de metadados duplicou avaliações"
 
     report.update(
         documents=int(len(df)),

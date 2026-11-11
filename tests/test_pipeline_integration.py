@@ -26,3 +26,14 @@ def test_answers_in_scope_with_evidence(pipe):
 def test_refuses_out_of_scope(pipe, q):
     r = pipe.ask(q)
     assert not r.sufficient and r.generator == "guardrail" and not r.evidences
+
+
+def test_context_has_single_statistics_block(pipe):
+    r = pipe.ask("O que os clientes relatam sobre problemas relacionados à entrega?")
+    assert r.context.count("ESTATÍSTICAS DE TEMAS") == 1
+
+
+def test_broad_question_is_decomposed_by_theme(pipe):
+    r = pipe.ask("Quais são os principais problemas relatados pelos clientes em suas avaliações?")
+    assert r.retrieval.mode == "amplo"
+    assert len({e.subquery for e in r.evidences}) >= 3

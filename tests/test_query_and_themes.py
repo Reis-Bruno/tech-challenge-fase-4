@@ -60,3 +60,28 @@ def test_citation_check_accepts_grouped_citations():
     out = check_citations("Atrasos frequentes [R1, R2] e [R3; R12].", n_evidences=3)
     assert out["cited"] == [1, 2, 3] and out["invalid_citations"] == [12]
     assert not out["uncited_answer"]
+
+
+def test_integrity_checks_detect_orphans_and_bad_scores():
+    import pandas as pd
+
+    from voc_rag.data_prep import integrity_checks
+
+    reviews = pd.DataFrame({"review_id": ["r1", "r2", "r2"], "order_id": ["o1", "o2", "oX"],
+                            "review_score": [5, 9, 1],
+                            "review_comment_message": ["bom", "linha1\nlinha2", None]})
+    orders = pd.DataFrame({"order_id": ["o1", "o2", "o3"], "customer_id": ["c1", "c2", "c9"]})
+    items = pd.DataFrame({"order_id": ["o1", "o1", "o2"], "order_item_id": [1, 2, 1],
+                          "product_id": ["p1", "p2", "p9"]})
+    products = pd.DataFrame({"product_id": ["p1", "p2"], "product_category_name": ["a", None]})
+    customers = pd.DataFrame({"customer_id": ["c1", "c2"]})
+    out = integrity_checks(reviews, orders, items, products, customers)
+    assert out["avaliacoes_sem_pedido"] == 1
+    assert out["pedidos_sem_cliente"] == 1
+    assert out["itens_sem_produto"] == 1
+    assert out["pedidos_sem_itens"] == 1
+    assert out["scores_fora_de_1_a_5"] == 1
+    assert out["comentarios_com_quebra_de_linha"] == 1
+    assert out["review_ids_em_mais_de_um_pedido"] == 1
+    assert out["pedidos_com_mais_de_um_item"] == 1
+    assert out["produtos_sem_categoria"] == 1

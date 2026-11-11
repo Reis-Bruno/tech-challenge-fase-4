@@ -20,3 +20,6 @@ anthropic>=0.40       # Claude
 
 # Testes
 pytest>=8
+
+# Notebook de demonstração (opcional)
+jupyter>=1.0

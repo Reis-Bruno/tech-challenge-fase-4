@@ -175,8 +175,8 @@ class HybridRetriever:
     # -- modo focado: pergunta com assunto específico ---------------------------------------
     def _retrieve_focused(self, plan: QueryPlan, mask: np.ndarray, k: int, trace: dict):
         qvec = self.embedder.embed_query(plan.dense_query)
-        dense = self._dense(qvec, plan)
-        sparse = self._sparse(plan, mask)
+        dense = self._dense(qvec, plan) if self.cfg.sources in ("hybrid", "dense") else []
+        sparse = self._sparse(plan, mask) if self.cfg.sources in ("hybrid", "bm25") else []
         trace["dense_hits"], trace["bm25_hits"] = len(dense), len(sparse)
 
         # Reciprocal Rank Fusion: combina rankings sem precisar calibrar escalas
@@ -207,7 +207,7 @@ class HybridRetriever:
             else:
                 ok = bool(overlap) or sim >= self.threshold
             info[row] = (float(sim), overlap, ok)
-            if ok:
+            if ok or not self.cfg.use_support_check:
                 supported_rows.append(row)
         trace["supported_candidates"] = len(supported_rows)
 
@@ -215,8 +215,11 @@ class HybridRetriever:
         # favorece avaliações que tratam de TODOS os aspectos perguntados
         # (ex.: "diferente" + "anúncio") e não só do termo mais comum ("receber").
         relevance = {row: rrf[row] * (0.5 + self._coverage(core, self.doc_stems[row]))
-                     for row in supported_rows} if core else rrf
-        selected = self._mmr(qvec, supported_rows, relevance, k)
+                     for row in supported_rows} if core and self.cfg.use_coverage else rrf
+        if self.cfg.use_mmr:
+            selected = self._mmr(qvec, supported_rows, relevance, k)
+        else:
+            selected = sorted(supported_rows, key=relevance.get, reverse=True)[:k]
         evidences = [self._evidence(row, info[row][0], rrf[row], info[row][1],
                                     dup_count.get(row, 0), dense_rank.get(row),
                                     bm25_rank.get(row), True) for row in selected]
@@ -265,7 +268,7 @@ class HybridRetriever:
         evidences: list[Evidence] = []
         n_supported, max_sim, qvec, mode = 0, 0.0, None, "recusado"
         if plan.in_scope and population:
-            if plan.broad and pop_stats:
+            if plan.broad and pop_stats and self.cfg.use_decomposition:
                 mode = "amplo"
                 evidences, n_supported = self._retrieve_broad(plan, mask, pop_stats, k, trace)
             else:
@@ -278,7 +281,7 @@ class HybridRetriever:
             sufficient, reason = False, plan.scope_reason
         elif population == 0:
             sufficient, reason = False, "Nenhuma avaliação satisfaz os filtros aplicados."
-        elif n_supported < self.cfg.min_evidence:
+        elif n_supported < self.cfg.min_evidence and self.cfg.use_support_check:
             sufficient = False
             reason = (f"Apenas {n_supported} avaliação(ões) da base têm relação verificável com a "
                       f"pergunta (mínimo exigido: {self.cfg.min_evidence}).")

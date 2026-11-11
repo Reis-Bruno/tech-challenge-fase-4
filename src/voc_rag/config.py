@@ -64,6 +64,12 @@ class RetrievalConfig:
         default_factory=lambda: {"fastembed": 0.45, "lsa": 0.20}
     )
     theme_sample: int = 300  # avaliações usadas para estimar frequência de temas
+    # Chaves de ablação (eval/ablation.py). Em produção ficam todas ligadas.
+    sources: str = "hybrid"  # hybrid | dense | bm25
+    use_support_check: bool = True  # exige vínculo verificável pergunta-avaliação
+    use_coverage: bool = True  # reordenação pela cobertura IDF dos termos da pergunta
+    use_mmr: bool = True  # diversificação das evidências finais
+    use_decomposition: bool = True  # perguntas amplas -> subconsultas por tema
 
 
 RETRIEVAL = RetrievalConfig()

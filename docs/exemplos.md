@@ -1,6 +1,6 @@
 # Exemplos de perguntas e respostas
 
-Gerados por `python eval/run_eval.py` (embeddings `lsa`, gerador `guardrail, llm:gemini/gemini-3.5-flash, llm:gemini/gemini-3.5-flash-lite`).
+Gerados por `python eval/run_eval.py` (embeddings `lsa`, gerador `guardrail, llm:gemini/gemini-3.5-flash`).
 
 ## Quais são os principais problemas relatados pelos clientes em suas avaliações?
 
@@ -9,17 +9,15 @@ Gerados por `python eval/run_eval.py` (embeddings `lsa`, gerador `guardrail, llm
 *Transformações da pergunta:* intenção negativa -> filtro nota <= 3; pergunta ampla (sem termo de conteúdo) -> decomposição em subconsultas pelos temas mais frequentes da população filtrada
 
 ```text
-Os principais problemas relatados pelos clientes com notas entre 1 e 3 referem-se à não entrega e ao atraso nos pedidos, seguidos por solicitações de troca/cancelamento e recebimento de produtos errados ou divergentes. De acordo com as estatísticas por palavras-chave na base filtrada, a não entrega do produto é a reclamação mais recorrente, representando 26,6% dos casos.
+Os principais problemas relatados concentram-se em falhas de entrega (produtos não recebidos ou com atraso), seguidos por demandas de troca, devolução ou cancelamento, e pelo recebimento de itens errados ou divergentes do anunciado.
 
 **Principais problemas identificados:**
 
-*   **Produto não recebido (26,6% / 3.845 menções nas estatísticas):** É a principal queixa na base de dados, onde os clientes afirmam categoricamente que não receberam a mercadoria comprada [R1], [R2].
-*   **Atraso / demora na entrega (13,1% / 1.896 menções nas estatísticas):** Clientes relatam entregas que demoraram além do esperado ou atrasaram em relação ao prazo estabelecido [R3], [R4].
-*   **Troca, devolução, cancelamento ou reembolso (12,1% / 1.742 menções nas estatísticas):** Ocorrência de solicitações do consumidor para cancelar a compra ou buscar suporte para realizar a troca de itens [R5], [R6].
-*   **Produto errado / diferente do anunciado (8,1% / 1.173 menções nas estatísticas):** Reclamações referentes ao envio de itens com especificações divergentes do anúncio (como conectores incompatíveis com o aparelho) ou produtos apresentando medições/funcionamento incorretos [R7], [R8].
-*   **Outras categorias mapeadas nas estatísticas:** Também foram registradas queixas sobre defeito/avaria (6,4%), pedido incompleto/itens faltando (5,7%), qualidade abaixo do esperado (3,3%) e preço/custo-benefício (2,1%).
+* **Produto não recebido e atraso na entrega:** Representa a maior parte das queixas por palavras-chave na base filtrada (26,6% para não recebido e 13,1% para atraso/demora). Os clientes relatam expressamente a ausência da entrega do item [R1], [R2] ou insatisfação com a demora e extrapolação do prazo [R3], [R4].
+* **Solicitações de troca, devolução, cancelamento ou reembolso:** Presente em 12,1% dos casos da base filtrada, reunindo pedidos de cancelamento imediato do pedido [R5] e cobranças para resolução do processo de troca [R6].
+* **Produto errado ou diferente do anunciado:** Representa 8,1% das ocorrências na base filtrada. Os relatos incluem o envio de itens incompatíveis com o modelo do cliente (diferente da especificação comprada) [R7] ou produtos que apresentam medições/funcionamento incorretos [R8].
 
-Limitações: A análise qualitativa apoia-se em uma amostra de 8 avaliações individuais e em contagens por palavras-chave restritas a avaliações com nota de 1 a 3.
+Limitações: Análise baseada em uma amostra reduzida de depoimentos e estatísticas de palavras-chave restritas a avaliações de nota 1 a 3.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -40,16 +38,15 @@ Limitações: A análise qualitativa apoia-se em uma amostra de 8 avaliações i
 *Transformações da pergunta:* intenção negativa -> filtro nota <= 3; expansão BM25 com sinônimos de: entrega
 
 ```text
-Os clientes relatam insatisfação principalmente com atrasos, demoras no transporte e produtos pendentes de entrega, além de apontarem falhas de comunicação e contratempos logísticos. Nas estatísticas da população filtrada (notas 1–3), o tema "Produto não recebido" é o mais incidente (26,6%), seguido por "Atraso / demora na entrega" (13,1%).
+Os clientes relatam insatisfação focada principalmente em atrasos, demora excessiva na entrega e não recebimento de produtos. Nas estatísticas de temas da base filtrada, "Produto não recebido" (40,0%) e "Atraso / demora na entrega" (22,5%) são os problemas mais frequentes.
 
 Principais pontos relatados:
 
-- **Atrasos e demora na entrega:** Há frequentes reclamações sobre descumprimento do prazo e demora excessiva para o envio ou chegada dos itens [R1], [R2], [R3], [R4], [R5], [R8]. Um cliente questiona se o motivo do atraso seria uma greve nos Correios [R3]. Estatisticamente, "Atraso / demora na entrega" representa 13,1% das avaliações da população filtrada (1.896 casos) e 22,5% das que mencionam o assunto.
-- **Produto não entregue / pendente:** Clientes destacam que continuam aguardando a chegada de pedidos já atrasados [R5]. O tema "Produto não recebido" é o motivo com maior volume de contagem na base filtrada, somando 3.845 avaliações (26,6% da população filtrada e 40,0% entre as avaliações que mencionam o assunto).
-- **Contratempos e falta de comunicação:** Consumidores relatam problemas na entrega decorrentes de parceiros logísticos e criticam a falta de aviso sobre o motivo das falhas [R7], [R10]. Há casos em que o problema foi resolvido antes da chegada [R6] ou que a empresa se desculpou pelo atraso ao entregar [R8].
-- **Avaliações sem registro de contratempo:** Existe relato isolado em nota 3 que afirma ter recebido a entrega sem problemas [R9].
+- **Atrasos e demora excessiva:** Clientes registram frequentemente que a entrega demorou ou atrasou em relação ao esperado [R1] [R2] [R3] [R4] [R5] [R8]. Na contagem por palavras-chave, "Atraso / demora na entrega" totaliza 1.812 avaliações (22,5% das menções de temas).
+- **Produto não recebido / Espera pelo pedido:** Há relatos de clientes que aguardavam a chegada do item que já se encontrava atrasado [R5]. Esse tema ("Produto não recebido") representa a maior volume nas estatísticas, com 3.227 ocorrências (40,0% das menções de temas).
+- **Falta de transparência e contratempos de transporte:** Consumidores mencionam falhas gerais no processo de entrega [R1] [R7], ausência de explicações por parte do e-commerce/parceiros sobre a causa do problema [R10] e indagam sobre possíveis causas externas, como greve dos Correios [R3]. Em outros casos, é ressaltado que houve problemas, mas a entrega foi concluída após retratação ou resolução [R6] [R8].
 
-Limitações: Análise baseada em uma amostra de 10 avaliações e em contagens por palavras-chave restritas a pedidos com notas de 1 a 3.
+Limitações: Análise baseada em uma amostra reduzida de 10 avaliações e estatísticas por palavras-chave restritas à população de notas 1 a 3.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -72,14 +69,16 @@ Limitações: Análise baseada em uma amostra de 10 avaliações e em contagens 
 *Transformações da pergunta:* intenção positiva -> filtro nota >= 4; pergunta ampla (sem termo de conteúdo) -> decomposição em subconsultas pelos temas mais frequentes da população filtrada
 
 ```text
-Os aspectos mais elogiados pelos clientes com avaliações positivas (notas 4 e 5) referem-se à agilidade na entrega, à qualidade dos produtos recebidos e à satisfação geral que gera a intenção de recomprar.
+Os aspectos mais elogiados pelos clientes de notas 4 e 5 concentram-se na rapidez da entrega, na intenção de voltar a comprar na loja, na qualidade do produto e no bom custo-benefício.
 
-* **Entrega rápida / antes do prazo**: É o tema mais frequente na base filtrada, representando 29,4% das avaliações (8.133 menções baseadas em palavras-chave), com clientes destacando a agilidade e o recebimento antecipado [R1], [R2].
-* **Recomendação e intenção de recompra**: Representa 20,6% das avaliações (5.706 menções no tema), onde os compradores expressam explicitamente que voltariam a comprar na loja [R3], [R4].
-* **Boa qualidade do produto**: Presente em 18,8% das avaliações (5.208 menções no tema), com relatos que elogiam o padrão do produto e a conformidade com as especificações ou fotos anunciadas [R5], [R6].
-* **Preço / custo-benefício**: Representa 2,9% das avaliações (814 menções no tema), com clientes pontuando positivamente a relação entre o custo e o benefício obtido [R7], [R8].
+Principais pontos destacados:
 
-Limitações: Análise restrita à amostra filtrada de notas 4–5 e às contagens por palavras-chave dos temas fornecidos.
+* **Entrega rápida e antecipada:** É o ponto mais expressivo na base filtrada por palavras-chave, presente em 29,4% das avaliações (8.133 menções), em que os clientes ressaltam que o pedido chegou rapidamente ou antes do prazo previsto [R1], [R2].
+* **Recomendação e intenção de recompra:** Representa 20,6% das avaliações (5.706 menções), com os consumidores afirmando expressamente que voltariam a comprar no estabelecimento [R3], [R4].
+* **Qualidade do produto e conformidade:** Fator presente em 18,8% das avaliações (5.208 menções), onde os compradores destacam a boa qualidade dos itens e a correspondência exata com as especificações e fotos anunciadas [R5], [R6].
+* **Preço e custo-benefício:** Citado em 2,9% da população filtrada (814 menções), sendo apontado como um ótimo custo-benefício pelos clientes [R7], [R8].
+
+Limitações: Análise restrita a avaliações positivas (notas 4–5) e a estatísticas derivadas de contagens por palavras-chave na base disponibilizada.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -100,16 +99,16 @@ Limitações: Análise restrita à amostra filtrada de notas 4–5 e às contage
 *Transformações da pergunta:* intenção negativa -> filtro nota <= 2; pergunta ampla (sem termo de conteúdo) -> decomposição em subconsultas pelos temas mais frequentes da população filtrada
 
 ```text
-Com base na população de avaliações negativas (notas 1–2), os principais padrões de insatisfação concentram-se em problemas logísticos de entrega, envio de itens divergentes do anunciado e entraves no pós-venda para trocas ou cancelamentos.
+Nas avaliações de clientes insatisfeitos (notas 1 e 2), identificam-se padrões centrados em falhas de entrega, envio de itens incorretos ou avariados e dificuldades na solicitação de trocas e cancelamentos. Com base nas estatísticas por palavras-chave, a não entrega do produto é o motivo mais frequente (31,9%), acompanhada por demandas de troca/cancelamento (14,1%) e atrasos na entrega (14,0%).
 
-**Principais padrões identificados:**
+Principais padrões identificados:
 
-- **Não recebimento do produto e falha de comunicação:** É o padrão de maior frequência nas contagens por palavras-chave sobre a base filtrada, representando 31,9% das avaliações (3.454 casos). Os clientes relatam a não entrega do pedido e a ausência de notificações ou avisos por parte do vendedor [R1], [R2].
-- **Dificuldades com trocas, cancelamentos e avarias:** Representa 14,1% dos registros (1.531 casos). Há relatos de clientes solicitando o cancelamento do pedido [R3], bem como relatos de recusa na troca de produtos que chegaram danificados, forçando o cliente a cancelar a compra [R4].
-- **Atraso na entrega:** Corresponde a 14,0% das reclamações (1.518 casos), onde os clientes expressam insatisfação especificamente com a demora na chegada da mercadoria [R5], [R6].
-- **Envio de produto errado ou diferente do anunciado:** Presente em 9,0% das avaliações (972 casos). Os consumidores indicam o recebimento de itens incorretos ou incompatíveis com as especificações contidas no anúncio [R7], [R8].
+- **Não recebimento do produto:** Clientes relatam a ausência de entrega do item comprado, por vezes acompanhada da falta de notificação ou aviso por parte do vendedor [R1], [R2].
+- **Atrasos na entrega:** Registram-se reclamações sobre a demora excessiva para a chegada das mercadorias [R5], [R6].
+- **Envio de produtos errados ou divergentes:** Consumidores relatam ter recebido itens diferentes dos anunciados que não atendem às suas necessidades, demandando trocas [R7], [R8].
+- **Dificuldades em trocas e cancelamentos:** Ocorrem solicitações de cancelamento da compra, incluindo cenários em que o produto chegou danificado e a solicitação de troca foi negada [R3], [R4].
 
-Limitações: Análise baseada estritamente em uma amostra de 8 avaliações e nas estatísticas por palavras-chave da população filtrada fornecida.
+Limitações: Análise baseada em estatísticas de palavras-chave e em uma amostra de 8 avaliações individuais de pedidos com notas 1 e 2.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -130,15 +129,14 @@ Limitações: Análise baseada estritamente em uma amostra de 8 avaliações e n
 *Transformações da pergunta:* intenção negativa -> filtro nota <= 3; expansão BM25 com sinônimos de: entrega, prazo
 
 ```text
-As avaliações de clientes indicam problemas recorrentes com o prazo de entrega, divididos entre o descumprimento da data prevista e a insatisfação com prazos estimativos excessivamente longos. Na população filtrada (notas 1 a 3), a categoria "Atraso / demora na entrega" representa 13,1% das avaliações (1.896 casos).
+As avaliações evidenciam insatisfação recorrente em relação ao prazo de entrega, dividindo-se entre o descumprimento/atraso da data prevista e a percepção de que os prazos informados são excessivamente longos. Essa recorrência é respaldada pelas estatísticas do tema, onde "Atraso / demora na entrega" equivale a 22,3% (1.812 avaliações) das menções na base filtrada.
 
-Principais pontos observados nas evidências:
+Principais pontos identificados:
+- **Descumprimento e atraso do prazo:** Clientes citam expressamente que o prazo de entrega venceu, expirou ou não foi cumprido, gerando atrasos na entrega do produto [R2], [R4], [R5], [R7], [R10].
+- **Prazos estimados excessivamente longos:** Mesmo em pedidos entregues dentro do limite estipulado, os clientes reclamam que a estimativa de tempo informada para a entrega é muito longa ou extensa [R3], [R6], [R8], [R9].
+- **Citação genérica ao tema:** O prazo de entrega é apontado de forma direta como o motivo da insatisfação [R1].
 
-* **Atrasos e descumprimento da data de entrega:** Diversos clientes relatam que a entrega atrasou em relação à data estipulada ou que o prazo expirou sem a chegada do produto [R2], [R4], [R5], [R7], [R10].
-* **Prazos de entrega excessivamente extensos:** Mesmo em pedidos entregues dentro da estimativa original, há insatisfações recorrentes quanto à duração prolongada do prazo oferecido [R3], [R6], [R8], [R9].
-* **Menção genérica ao prazo como ponto negativo:** Registros em que o prazo de entrega é apontado como justificativa para notas baixas [R1].
-
-Limitações: Análise restrita às 10 avaliações amostradas e estatísticas de palavras-chave da base filtrada (notas 1–3).
+Limitações: Análise fundamentada em uma amostra de 10 avaliações e estatísticas de palavras-chave restritas a pedidos com notas entre 1 e 3.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -161,14 +159,15 @@ Limitações: Análise restrita às 10 avaliações amostradas e estatísticas d
 *Transformações da pergunta:* expansão BM25 com sinônimos de: qualidade
 
 ```text
-As avaliações mostram opiniões divididas sobre a qualidade, com registros tanto de satisfação com materiais e acabamentos quanto de relatos de fragilidade, defeitos de fabricação e divergência em relação às imagens do site [R1] [R2] [R3] [R4] [R5] [R6] [R7] [R8] [R9] [R10]. Estatisticamente, a boa qualidade do produto aparece em 5.510 menções (13,1% da base total), enquanto a qualidade abaixo do esperado soma 1.164 menções (2,8%) e o tema de defeito/produto quebrado possui 701 menções nas avaliações do assunto.
+Sim, existem padrões claros e recorrentes nas avaliações sobre a qualidade dos produtos, divididos entre avaliações positivas de conformidade e reclamações sobre fragilidade e defeitos. Nas estatísticas do tema, "Boa qualidade do produto" é o ponto mais citado (43,7% das menções / 1.983 avaliações), mas a qualidade abaixo do esperado (25,0% / 1.133 avaliações) e defeitos (15,5% / 701 avaliações) também formam um padrão expressivo de insatisfação.
 
-* **Satisfação com o padrão de qualidade:** Clientes destacam produtos originais, com bom acabamento, materiais de qualidade e dentro dos padrões esperados [R4] [R5] [R6] [R8] [R10].
-* **Problemas de fragilidade e baixa qualidade:** Vários clientes relatam que os produtos são frágeis, de qualidade muito baixa ou que deixam a desejar [R1] [R2] [R3].
-* **Itens quebrados e com defeito:** Há registros de mercadorias que chegaram quebradas ou apresentaram defeitos de fabricação, como problemas em mosqueteiros, cronômetros e botões [R2] [R3] [R7].
-* **Expectativa desalinhada com o site:** Algumas avaliações apontam insatisfação porque o produto recebido aparentava ter melhor qualidade de material e acabamento nas fotos do site [R9].
+**Principais padrões identificados:**
 
-Limitações: Análise baseada em uma amostra de 10 avaliações detalhadas e em estatísticas de palavras-chave da base filtrada.
+* **Aprovação do material, acabamento e expectativas atendidas:** Diversos clientes elogiam a qualidade do material, o acabamento e o fato de o item ser original ou corresponder ao anunciado no site [R4] [R5] [R6] [R8] [R10]. Esse padrão é suportado por 1.983 avaliações (43,7%) registrando boa qualidade nas estatísticas de temas.
+* **Fragilidade do produto e divergência com o site:** Há registros recorrentes de consumidores que consideram o produto frágil, de baixa qualidade ou com material/acabamento inferior ao que aparentava na foto do site [R1] [R3] [R9]. As estatísticas mostram 1.133 avaliações (25,0%) sinalizando qualidade abaixo do esperado.
+* **Produtos recebidos com defeito ou já quebrados:** A fragilidade e a baixa qualidade do produto estão frequentemente associadas ao recebimento do item danificado ou com defeitos de fabricação logo na entrega [R2] [R3] [R7]. Esse problema aparece em 701 avaliações (15,5%) nas estatísticas do tema.
+
+Limitações: Análise restrita a uma amostra de 10 avaliações textuais e aos dados de contagem por palavras-chave fornecidos no contexto.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -191,16 +190,16 @@ Limitações: Análise baseada em uma amostra de 10 avaliações detalhadas e em
 *Transformações da pergunta:* intenção positiva -> filtro nota >= 4; categoria citada -> filtro ['beleza_saude']; pergunta ampla (sem termo de conteúdo) -> decomposição em subconsultas pelos temas mais frequentes da população filtrada
 
 ```text
-Os clientes da categoria de beleza e saúde elogiam principalmente a agilidade na entrega e a boa qualidade dos produtos, fatores que impulsionam a confiança e a intenção de comprar novamente na loja. Com base nas estatísticas por palavras-chave na população filtrada (2.416 avaliações de nota 4 e 5), o tema mais recorrente é a entrega rápida (32,2%), seguido pela recomendação da loja (21,9%) e qualidade do produto (17,1%).
+Os clientes da categoria de beleza e saúde elogiam principalmente a rapidez na entrega, a boa qualidade dos produtos e a confiança na loja, que gera intenção de recompra. De acordo com as estatísticas por palavras-chave na base filtrada, a velocidade de entrega é o aspecto mais mencionado, presente em 32,2% das avaliações positivas.
 
-**Principais pontos elogiados:**
+Os principais pontos elogiados são:
 
-* **Entrega rápida e dentro do prazo:** É o ponto mais destacado, somando 777 menções (32,2%) nas estatísticas da base. Os clientes ressaltam o recebimento dos produtos antes da data prevista e o cumprimento das datas combinadas [R1], [R2], [R3], [R7], [R8].
-* **Qualidade e ergonomia do produto:** A boa qualidade dos itens é mencionada em 413 avaliações (17,1%), com elogios adicionais à facilidade de uso, conforto e ergonomia [R2], [R5], [R6], [R8].
-* **Confiança e intenção de recompra:** Representando 528 menções (21,9%) nas estatísticas, a pontualidade e o cumprimento do combinado geram forte intenção dos clientes em comprar novamente e recomendar a loja [R3], [R4].
-* **Embalagem e proteção:** Com 58 menções (2,4%) nas estatísticas, os consumidores também elogiam o recebimento de mercadorias bem protegidas e com embalagens em perfeito estado [R7], [R8].
+* **Entrega rápida e dentro do prazo:** É o tema mais frequente na base filtrada (32,2% / 777 avaliações), com clientes destacando que os produtos chegam bem antes do prazo prometido ou em poucos dias [R1], [R2], [R7], [R8].
+* **Confiança e intenção de recompra:** Segundo maior tema identificado (21,9% / 528 avaliações), onde os consumidores relatam que o processo ocorreu dentro do combinado e declaram que voltariam a comprar no estabelecimento [R3], [R4].
+* **Boa qualidade dos produtos:** Ocupa o terceiro lugar em frequência (17,1% / 413 avaliações), recebendo elogios pela qualidade geral e por atributos como ergonomia, conforto e simplicidade de uso [R2], [R5], [R6], [R8].
+* **Embalagem bem protegida:** Representa 2,4% (58 avaliações) dos temas citados, com os clientes elogiando o estado perfeito do pacote e a proteção dos itens no envio [R7], [R8].
 
-Limitações: A análise baseia-se em uma amostra filtrada apenas com avaliações positivas (notas 4 e 5) e a frequência dos temas é derivada de contagens por palavras-chave.
+Limitações: Análise baseada em uma amostra de 8 avaliações textuais e estatísticas extraídas por palavras-chave de pedidos com nota 4–5 na categoria beleza_saude.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -221,13 +220,14 @@ Limitações: A análise baseia-se em uma amostra filtrada apenas com avaliaçõ
 *Transformações da pergunta:* intenção negativa -> filtro nota <= 2; pergunta ampla (sem termo de conteúdo) -> decomposição em subconsultas pelos temas mais frequentes da população filtrada
 
 ```text
-Com base na amostra de avaliações com nota baixa (1–2), os principais problemas relatados envolvem falhas na entrega, dificuldades com cancelamentos ou devoluções e recebimento de produtos incorretos ou com defeito.
+Os principais problemas relatados nas avaliações com nota baixa (1 e 2) concentram-se na não entrega do pedido, atrasos na distribuição, entraves em cancelamentos/devoluções e envio de produtos errados ou com defeito.
 
-* **Produto não recebido ou atrasado:** Há relatos de itens que não foram entregues [R1] [R2] e de atrasos significativos na entrega (como 12 e 14 dias) [R2] [R5] [R6]. Estatisticamente, "Produto não recebido" é o tema mais frequente, presente em 31,9% da base filtrada (3454 menções), seguido por "Atraso / demora na entrega" com 14,0% (1518 menções).
-* **Problemas com troca, devolução e cancelamento:** Clientes relatam recusa no cancelamento mesmo antes da emissão da nota fiscal [R3] e problemas relacionados a devoluções [R4]. O tema representa 14,1% das menções (1531 ocorrências).
-* **Produto errado, com defeito ou baixa qualidade:** Há menções de recebimento de itens diferentes do anunciado [R7], produtos que marcam errado [R8] e itens de baixa qualidade que apresentam problemas logo no primeiro dia de uso [R4]. O tema de produtos errados aparece em 9,0% dos casos (972 menções).
+- **Não recebimento do produto**: Representa a maior frequência nas estatísticas de temas baseadas em palavras-chave (31,9% / 3.454 casos), com relatos diretos de clientes que não receberam a compra [R1], [R2].
+- **Troca, devolução, cancelamento ou reembolso**: Corresponde a 14,1% das avaliações filtradas (1.531 casos), abrangendo queixas sobre negativa de cancelamento sob alegação de despacho prévio [R3] e necessidade de solicitar devolução por defeito/baixa qualidade no primeiro dia de uso [R4].
+- **Atraso e demora na entrega**: Presente em 14,0% dos relatos (1.518 casos), com insatisfações explícitas relacionadas ao excesso de tempo para a realização da entrega [R5], [R6].
+- **Produto errado ou diferente do anunciado**: Aparelha 9,0% das menções (972 casos), citando o recebimento de conectores/peças incompatíveis com o anunciado [R7] ou itens marcando/medindo de forma errada [R8].
 
-Limitações: A análise baseia-se em uma amostra limitada de avaliações textuais complementada por estatísticas de palavras-chave da base filtrada.
+Limitações: As conclusões combinam a análise de uma amostra restrita de 8 depoimentos com estatísticas baseadas em identificação por palavras-chave na população de avaliações de nota 1–2.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -248,16 +248,14 @@ Limitações: A análise baseia-se em uma amostra limitada de avaliações textu
 *Transformações da pergunta:* 'entregas atrasadas' -> filtro delivery_status = atrasado; expansão BM25 com sinônimos de: atras
 
 ```text
-Nas avaliações de pedidos filtrados por atraso na entrega, o tema principal é a insatisfação com a demora e o não recebimento do produto até a data da avaliação, além de impactos na nota concedida pelo consumidor.
+Nas avaliações de pedidos filtrados por atraso na entrega, o assunto principal abordado pelos clientes é a própria insatisfação com a demora ou com o não recebimento do produto até o momento da avaliação. 
 
-**Principais pontos identificados:**
+* **Reclamações diretas de atraso na entrega:** Clientes registram expressamente a insatisfação com a entrega fora do prazo, classificando a demora em alguns casos como excessiva ou um absurdo [R1] [R2] [R3] [R4] [R5] [R6] [R8] [R9] [R10]. Nas estatísticas por palavras-chave da base filtrada, o tema "Atraso / demora na entrega" representa 32,9% (971) das menções.
+* **Produto não recebido até a data da avaliação:** É o tema de maior frequência nas estatísticas da base filtrada, presente em 58,7% (1.734) das avaliações que tratam do assunto, refletido em relatos de clientes cujo produto ainda se encontrava atrasado/não entregue [R2] [R6] [R10].
+* **Responsabilidade atribuída aos Correios:** É relatado caso pontual em que o atraso na entrega da mercadoria foi atribuído diretamente aos Correios [R7].
+* **Outros temas identificados por palavras-chave:** Nas estatísticas da base filtrada, também aparecem citações sobre recomendação da loja (6,4% / 188), troca, devolução, cancelamento ou reembolso (5,8% / 171), percepções de entrega rápida/antes do prazo (5,3% / 155), atendimento/comunicação com vendedor (2,5% / 73), boa qualidade do produto (1,7% / 51) e produto errado ou diferente (1,6% / 47).
 
-*   **Reclamações diretas sobre atraso e produto não recebido:** Os consumidores relatam frequentemente a ocorrência e o absurdo do atraso [R2] [R3] [R5] [R6] [R8] [R9] [R10]. Nas estatísticas por palavras-chave na base filtrada (3.809 avaliações), "Produto não recebido" representa 45,9% (1.749 avaliações) e "Atraso / demora na entrega" representa 26,1% (994 avaliações).
-*   **Impacto na avaliação do cliente:** O atraso é citado diretamente como motivo para penalizar a nota do pedido [R1], havendo também relato de ser a primeira vez que o cliente passa por essa situação na loja [R4].
-*   **Responsabilização de terceiros:** Existe menção explicitando que o motivo do atraso no envio do produto foi dos Correios [R7].
-*   **Outros temas presentes nas estatísticas da base filtrada:** A contagem por palavras-chave também registra incidências de temas como "Recomenda a loja / compraria novamente" (7,2% / 276 avaliações), "Troca, devolução, cancelamento ou reembolso" (5,8% / 222 avaliações), "Boa qualidade do produto" (3,2% / 122 avaliações), "Atendimento / comunicação com vendedor" (2,4% / 91 avaliações) e "Produto errado / diferente do anunciado" (1,7% / 63 avaliações).
-
-Limitações: A análise textual detalhada baseia-se em uma amostra de 10 avaliações do início de 2018, enquanto os dados agregados derivam unicamente da contagem por palavras-chave do filtro aplicado.
+Limitações: Análise restrita à amostra de 10 avaliações disponibilizadas e às contagens automatizadas por palavras-chave, cobrindo apenas uma fração do volume total de pedidos atrasados.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -280,13 +278,14 @@ Limitações: A análise textual detalhada baseia-se em uma amostra de 10 avalia
 *Transformações da pergunta:* intenção negativa -> filtro nota <= 3; expansão BM25 com sinônimos de: atendimento
 
 ```text
-Os clientes reclamam principalmente da falta de comunicação e demora no retorno por parte dos vendedores, além da recusa não justificada de suporte em casos de problemas com o produto. Nas estatísticas da base que menciona o assunto, o tema "Atendimento / comunicação com vendedor" foi registrado em 149 avaliações (6,4%).
+Nas avaliações de notas baixas (1 a 3), os clientes reclamam sobretudo da lentidão ou falta de comunicação dos vendedores e da ausência de suporte para solucionar problemas com as compras. Nas estatísticas de temas da base filtrada, a categoria "Atendimento / comunicação com vendedor" representa 6,4% das menções (149 avaliações).
 
-* **Demora e falta de comunicação:** Os consumidores relatam demora no atendimento e no retorno de mensagens [R7] [R10], falta de contato do vendedor para informar sobre cancelamento de vendas [R3] e dificuldade para encontrar canais de contato direto [R1].
-* **Recusa imotivada de devolução e suporte:** Há relato de solicitação de devolução cancelada pelo vendedor sem explicação ou atendimento ao cliente, resultando em prejuízo ao comprador [R5].
-* **Classificação geral negativa:** O atendimento é classificado diretamente como "péssimo" em múltiplos relatos [R3] [R6].
+**Principais pontos de reclamação:**
 
-Limitações: A amostra individual é reduzida e inclui avaliações com notas baixas (1 a 3) que apresentam elogios pontuais ao atendimento [R2] [R4] [R8] [R9].
+- **Demora e falta de comunicação/retorno**: Os consumidores citam demora generalizada no atendimento [R10], lentidão para obter respostas do vendedor [R7], falta de contato por parte do vendedor para informar o cancelamento de pedidos não entregues [R3] e urgência/dificuldade em obter canais de contato [R1].
+- **Falta de suporte e recusa na resolução de problemas**: Há relatos de atendimento classificado como "péssimo" [R3] [R6], além de casos em que solicitações de devolução foram canceladas pelo vendedor sem justificativa, deixando o cliente sem atendimento após receber um produto incompleto [R5].
+
+Limitações: A amostra fornecida contém poucas evidências detalhadas de reclamações (e algumas avaliações trazem elogios), refletindo um recorte específico de notas 1 a 3.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -309,14 +308,16 @@ Limitações: A amostra individual é reduzida e inclui avaliações com notas b
 *Transformações da pergunta:* intenção negativa -> filtro nota <= 3
 
 ```text
-Os clientes reclamam com frequência de receber produtos diferentes do anunciado, sendo este o quarto tema mais recorrente nas estatísticas gerais (presente em 1.173 avaliações ou 8,1% da base filtrada). Vários relatos apontam discrepâncias em relação às fotos, cores, especificações técnicas e qualidade dos itens recebidos [R1] [R2] [R3] [R4] [R6] [R7] [R9].
+Sim, os clientes reclamam expressivamente de receber produtos diferentes do anunciado, apontando divergências em relação a fotos, cores, especificações e qualidade. Nas estatísticas de temas sobre a base filtrada (notas 1 a 3), a categoria "Produto errado / diferente do anunciado" representa 19,5% das menções (192 avaliações entre as 987 que abordam o assunto).
 
-* **Divergência de fotos, imagens e cores:** Os clientes relatam que o produto recebido não confere com as fotos do anúncio [R1] [R6] ou que receberam cores diferentes da solicitada e pagada [R2].
-* **Especificações e materiais incorretos:** Há reclamações de que as especificações anunciadas não conferem [R3], como a composição do tecido (ex: 80% algodão em vez de 100%) [R7] e materiais com tamanhos ou lados diferentes do prometido [R9].
-* **Baixa qualidade em relação ao anunciado:** Clientes apontam que, além de o item ser diferente do divulgado, ele apresenta qualidade inferior [R3] [R4].
-* **Solicitação de devolução e problemas de atendimento:** O recebimento de itens divergentes ou com defeito gera pedidos de devolução [R6] e reclamações sobre a falta de solução rápida por parte da empresa ou parceiros [R8].
+Principais pontos identificados nas avaliações:
 
-Limitações: Análise baseada em uma amostra qualitativa restrita de 10 avaliações detalhadas [R1-R10] e nas estatísticas de temas da população filtrada de 14.438 avaliações.
+- **Incompatibilidade com fotos e imagens:** Clientes relatam que o produto físico recebido não corresponde à imagem ou às fotos disponibilizadas no anúncio [R1], [R6].
+- **Divergência de cores:** Há relatos de envio de produtos em cores distintas das compradas, inclusive em casos onde foi pago um valor maior pela cor anunciada [R2].
+- **Especificações e materiais incorretos:** Ocorrem divergências na descrição técnica, como percentual de composição do tecido (por exemplo, entrega de 80% algodão quando o anunciado era 100%) [R7], dimensões/formatos do material [R9] e descumprimento geral das especificações anunciadas [R3].
+- **Qualidade inferior ao contratado:** Clientes mencionam que, além de receberem um produto diferente do solicitado, o item entregue é de qualidade inferior [R3], [R4].
+
+Limitações: A análise baseia-se em uma amostra de avaliações filtradas por notas de 1 a 3 e contagens por palavras-chave, não devendo ser generalizada para todas as vendas da plataforma.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |
@@ -339,13 +340,15 @@ Limitações: Análise baseada em uma amostra qualitativa restrita de 10 avalia�
 *Transformações da pergunta:* expansão BM25 com sinônimos de: embalagem
 
 ```text
-Os clientes apontam tanto problemas com embalagens amassadas ou deterioradas quanto avaliam positivamente a proteção dos produtos.
+Os clientes relatam experiências mistas sobre a embalagem: enquanto há elogios à proteção dos produtos, existe uma frequência significativa de reclamações sobre caixas amassadas, deterioradas ou inadequadas. Nas estatísticas de temas (base de 1.882 avaliações com o assunto), 40,6% (765) destacam "Embalagem bem feita / bem protegido".
 
-* **Embalagens amassadas ou danificadas:** Diversos clientes relatam que receberam os produtos com embalagens amassadas [R1], [R2], [R7], [R9], caixas deterioradas [R4], [R10] e embalagem inadequada que resultou em amassado no produto [R5], além de menção a avaria na embalagem [R3].
-* **Avaliações positivas de embalagem:** Por outro lado, há registros de clientes elogiando a ótima embalagem [R8] e, estatisticamente, o tema de embalagem bem feita / bem protegido aparece em 765 menções (40.6% da base de 1.882 avaliações sobre o assunto).
-* **Ausência de embalagem:** Há também um registro de produto recebido sem embalagem [R6].
+**Principais pontos identificados:**
 
-Limitações: Análise baseada em uma amostra de 10 avaliações qualitativas específicas sobre o tema e nas estatísticas agregadas fornecidas.
+- **Embalagens amassadas ou deterioradas:** É um padrão recorrente o recebimento de caixas e embalagens visivelmente amassadas, deterioradas ou com avarias externas [R1] [R2] [R3] [R4] [R7] [R9] [R10].
+- **Impacto no produto recebido:** O uso de embalagem inadequada resultou em danos ao próprio produto em alguns casos [R5]. Em contrapartida, outros clientes destacam que, apesar de a embalagem ter chegado muito amassada ou danificada, o produto em si permaneceu intacto [R3] [R7] [R10].
+- **Elogios e ausência de embalagem:** Há relatos pontuais de aprovação total ("ótima embalagem") [R8], bem como citação de produto entregue sem embalagem [R6].
+
+Limitações: Análise restrita a uma amostra de 10 avaliações e a contagens automatizadas por palavras-chave na base filtrada.
 ```
 
 | Ref | Nota | Data | Categoria | Entrega | Avaliação |

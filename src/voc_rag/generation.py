@@ -64,14 +64,17 @@ def build_context(plan: QueryPlan, result: RetrievalResult) -> str:
     parts = [f"FILTROS APLICADOS: {plan.filters.describe()}",
              f"AVALIAÇÕES NA POPULAÇÃO FILTRADA: {result.population}", "", "EVIDÊNCIAS:"]
     parts += [format_evidence(e) for e in result.evidences]
-    pop = format_theme_stats(result.theme_stats_population, result.population,
-                             "ESTATÍSTICAS DE TEMAS NA POPULAÇÃO FILTRADA")
-    ret = format_theme_stats(result.theme_stats_retrieved,
-                             result.trace.get("theme_sample_size", 0),
-                             "ESTATÍSTICAS DE TEMAS ENTRE AS AVALIAÇÕES QUE MENCIONAM O ASSUNTO")
-    for block in (pop, ret):
-        if block:
-            parts += ["", block]
+    # Um único bloco de estatísticas por resposta: enviar duas bases diferentes (população
+    # e subpopulação do assunto) levava o modelo a misturar percentuais na mesma frase.
+    if result.theme_stats_retrieved:
+        block = format_theme_stats(
+            result.theme_stats_retrieved, result.trace.get("theme_sample_size", 0),
+            "ESTATÍSTICAS DE TEMAS ENTRE AS AVALIAÇÕES QUE MENCIONAM O ASSUNTO")
+    else:
+        block = format_theme_stats(result.theme_stats_population, result.population,
+                                   "ESTATÍSTICAS DE TEMAS NA POPULAÇÃO FILTRADA")
+    if block:
+        parts += ["", block]
     return "\n".join(parts)
 
 
