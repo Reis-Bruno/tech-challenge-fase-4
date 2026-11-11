@@ -314,16 +314,17 @@ evidências, λ = 0,7 no MMR, mínimo de três evidências, limiar de similarida
 
 | Item | Situação |
 |---|---|
+| Pipeline completo com embeddings **fastembed** e geração pelo **Gemini** (`gemini-3.5-flash`; o reserva `gemini-3.5-flash-lite` respondeu parte das perguntas) | **Testado** nas 18 perguntas |
 | Pipeline completo com embeddings **LSA** e geração pelo **Gemini** (`gemini-3.5-flash`) | **Testado** nas 18 perguntas |
 | Modo extrativo (sem LLM) | **Testado** |
-| Ablação dos componentes da recuperação, com LSA | **Testado** |
+| Ablação dos componentes da recuperação, com LSA e com fastembed | **Testado** |
 | Verificações de integridade e 16 testes automatizados | **Testado** |
 | Interface Streamlit | **Testado** só com o utilitário de testes do Streamlit (carrega e responde sem erro) |
-| Backend de embeddings **fastembed** (o padrão do projeto) | **Não executado.** O ambiente de desenvolvimento não acessava o HuggingFace |
-| Limiar de similaridade 0,45 do fastembed | **Chute inicial**, nunca calibrado |
-| "Busca híbrida é melhor que BM25 sozinho" | **Hipótese.** Com LSA o BM25 sozinho foi melhor (tabela abaixo); espero que isso se inverta com o modelo neural, mas não medi |
+| Backend de embeddings **fastembed** (o padrão do projeto) | **Testado** (ablação e avaliação de ponta a ponta abaixo) |
+| Limiar de similaridade 0,45 do fastembed | **Não calibrado.** Medi a distribuição de similaridade (abaixo): nenhuma decisão das 18 perguntas depende dele, então elas não servem para calibrá-lo. Mantive 0,45 |
+| "Busca híbrida é melhor que BM25 sozinho" | **Não confirmada.** Com fastembed o BM25 sozinho continuou com precisão maior que a híbrida (0,79 × 0,75); a híbrida ganha em polaridade (0,76 × 0,62). A precisão é um proxy léxico, que favorece o BM25, e não há variante que compare as duas com o resto do pipeline ligado |
 | Provedores OpenAI, Anthropic e Ollama | **Implementados, nunca executados** |
-| `scripts/download_data.py` | **Não executado** (Kaggle bloqueado no ambiente). Os CSVs vieram de uma cópia pública no GitHub. As contagens batem com as divulgadas para a base (99.224 avaliações, 99.441 pedidos), mas não comparei os arquivos com os do Kaggle |
+| `scripts/download_data.py` | **Testado.** O `kagglehub` baixou o dataset público (versão 2) sem credenciais. Todas as contagens da seção 4 (42.114 documentos e os números de integridade) saíram iguais às obtidas antes com uma cópia pública no GitHub |
 | Precisão dos padrões de tema | **Não medida** |
 | Fidelidade das respostas geradas | **Conferida à mão em duas respostas**, sem rotulagem sistemática |
 | Desempenho em perguntas fora das 18 | **Desconhecido** |
@@ -331,52 +332,94 @@ evidências, λ = 0,7 no MMR, mínimo de três evidências, limiar de similarida
 As 18 perguntas estão em [`eval/questions.json`](eval/questions.json): doze respondíveis
 (incluindo todos os exemplos do enunciado) e seis que devem ser recusadas.
 
-### Ablação da recuperação (LSA, sem LLM)
+### Ablação da recuperação (sem LLM)
 
-`eval/ablation.py` começa com busca vetorial pura e liga um componente por vez.
+`eval/ablation.py` começa com busca vetorial pura e liga um componente por vez. Cada célula
+mostra **LSA → fastembed**.
 
 | Variante | Precisão | Polaridade | Redundância (↓) | Temas | Recusas (de 6) |
 |---|---|---|---|---|---|
-| A. Só vetorial (top-k) | 0,63 | 0,64 | 0,73 | 1,0 | 2 |
-| B. Só BM25 | 0,79 | 0,61 | 0,37 | 2,9 | 2 |
-| C. Híbrida (RRF) | 0,75 | 0,66 | 0,52 | 1,7 | 2 |
-| D. C + filtros inferidos | 0,74 | 1,00 | 0,49 | 1,8 | 2 |
-| E. D + suporte e cobertura IDF | 0,75 | 1,00 | 0,53 | 1,9 | 6 |
-| F. E + MMR | 0,81 | 1,00 | 0,40 | 2,6 | 6 |
-| G. Pipeline completo (F + decomposição por tema) | 0,97 | 1,00 | 0,32 | 3,5 | 6 |
+| A. Só vetorial (top-k) | 0,63 → 0,71 | 0,64 → 0,82 | 0,73 → 0,67 | 1,0 → 3,1 | 2 → 2 |
+| B. Só BM25 | 0,79 → 0,79 | 0,61 → 0,62 | 0,37 → 0,47 | 2,9 → 3,0 | 2 → 2 |
+| C. Híbrida (RRF) | 0,75 → 0,75 | 0,66 → 0,76 | 0,52 → 0,57 | 1,7 → 3,0 | 2 → 2 |
+| D. C + filtros inferidos | 0,74 → 0,80 | 1,00 → 1,00 | 0,49 → 0,58 | 1,8 → 2,9 | 2 → 2 |
+| E. D + suporte e cobertura IDF | 0,75 → 0,84 | 1,00 → 1,00 | 0,53 → 0,60 | 1,9 → 3,2 | 6 → 6 |
+| F. E + MMR | 0,81 → 0,82 | 1,00 → 1,00 | 0,40 → 0,56 | 2,6 → 3,3 | 6 → 6 |
+| G. Pipeline completo (F + decomposição por tema) | 0,97 → 0,93 | 1,00 → 1,00 | 0,32 → 0,56 | 3,5 → 4,4 | 6 → 6 |
 
 *Precisão*: fração das evidências que contêm termos do assunto. *Polaridade*: fração das
-evidências com nota coerente com a pergunta. *Redundância*: cosseno médio entre as evidências.
-*Temas*: temas distintos nas evidências.
+evidências com nota coerente com a pergunta. *Redundância*: cosseno médio entre as evidências,
+calculado no espaço de vetores de cada backend; por isso só vale comparar dentro da mesma
+coluna de backend, não LSA com fastembed. *Temas*: temas distintos nas evidências. Relatórios
+completos em [`docs/ablacao.md`](docs/ablacao.md) (fastembed) e
+[`docs/lsa/ablacao.md`](docs/lsa/ablacao.md) (LSA).
 
 O que a tabela mostra:
 
-- Sem filtros, um terço das evidências de perguntas sobre problemas ou elogios tinha a nota
-  errada para a pergunta (C → D).
-- A verificação de suporte é o que recusa as quatro perguntas de fora do domínio (D → E).
-- O MMR reduz a repetição entre evidências (E → F).
-- A decomposição por tema dá o maior salto de precisão, nas cinco perguntas amplas (F → G).
+- Com o modelo neural, a busca vetorial pura melhora em tudo (A): precisão 0,63 → 0,71,
+  polaridade 0,64 → 0,82 e três temas distintos em vez de um.
+- Sem filtros, de um quarto (fastembed) a um terço (LSA) das evidências de perguntas sobre
+  problemas ou elogios tinha a nota errada para a pergunta (C → D). Com fastembed, os filtros
+  também sobem a precisão (0,75 → 0,80).
+- A verificação de suporte é o que recusa as quatro perguntas de fora do domínio (D → E), nos
+  dois backends. Com fastembed ela também sobe a precisão (0,80 → 0,84).
+- O MMR reduz a repetição entre evidências (E → F); com fastembed o efeito é menor
+  (0,60 → 0,56) e custa um pouco de precisão (0,84 → 0,82).
+- A decomposição por tema dá o maior salto de precisão, nas cinco perguntas amplas (F → G),
+  nos dois backends.
 
 O que a tabela **não** permite concluir:
 
 - A polaridade 1,00 a partir de D é efeito direto do filtro, não um achado.
 - O salto de G está inflado: nas perguntas amplas as evidências são escolhidas por padrões de
   tema parecidos com os que medem a precisão.
-- B melhor que C contraria a justificativa da busca híbrida. Atribuo isso à fraqueza do LSA,
-  mas é suposição até rodar com o fastembed.
+- B melhor que C em precisão contraria a justificativa da busca híbrida. Eu atribuía isso à
+  fraqueza do LSA, mas com fastembed o resultado se repetiu (0,79 × 0,75), então não era só
+  isso. Parte pode vir do proxy, que é léxico e premia evidências com a palavra exata; não medi
+  relevância de outro jeito. Em polaridade a híbrida é melhor (0,76 × 0,62), e não há variante
+  que compare BM25 e híbrida com filtros, suporte e MMR ligados.
+- B não usa embeddings, mas mudou um pouco (polaridade 0,61 → 0,62, temas 2,9 → 3,0). Nessa
+  rodada os CSVs vieram do Kaggle, e não da cópia do GitHub; suponho diferença de ordem das
+  linhas (empates no BM25), mas não verifiquei.
 
-### Avaliação de ponta a ponta (LSA + Gemini)
+### Avaliação de ponta a ponta (+ Gemini)
 
-| Métrica | Resultado |
+| Métrica | LSA | fastembed |
+|---|---|---|
+| Decisão responder/recusar correta | 18 de 18 | 18 de 18 |
+| Precisão das evidências (mesmo proxy da ablação) | 0,97 | 0,93 |
+| Evidências respeitando os filtros | 100% | 100% |
+| Respostas com citação inexistente | 0 de 12 | 0 de 12 |
+| Respostas sem citação | 0 de 12 | 0 de 12 |
+| Tempo médio por pergunta | cerca de 11 s | cerca de 12 s |
+
+O tempo é quase todo a chamada ao Gemini. Detalhe por pergunta em
+[`docs/avaliacao.md`](docs/avaliacao.md) (fastembed) e
+[`docs/lsa/avaliacao.md`](docs/lsa/avaliacao.md) (LSA).
+
+A queda de precisão com fastembed está nas quatro perguntas amplas Q01, Q04, Q07 e Q08 (de 1,00
+para 0,75–0,88). Li as seis evidências reprovadas: todas são relevantes, mas usam palavras que
+o padrão do proxy não tem ("produto não **entregue**", "ainda não **recebemos**", "não
+**corresponde** à descrição", "muito bem **embalado**"). O modelo neural escolhe paráfrases que
+o proxy léxico não reconhece. Não alterei os padrões para não ajustar a métrica ao resultado. Na
+direção oposta, a Q11 (produto diferente do anunciado) subiu de 0,70 para 1,00.
+
+### Limiar de similaridade do fastembed
+
+Para cada pergunta, olhei a similaridade entre ela e os candidatos da busca focada:
+
+| Grupo | Similaridade máxima |
 |---|---|
-| Decisão responder/recusar correta | 18 de 18 |
-| Precisão das evidências (mesmo proxy da ablação) | 0,97 |
-| Evidências respeitando os filtros | 100% |
-| Respostas com citação inexistente | 0 de 12 |
-| Respostas sem citação | 0 de 12 |
-| Tempo médio por pergunta | cerca de 11 s, quase todo na chamada ao Gemini |
+| Respondíveis focadas (Q02, Q05, Q06, Q09–Q12) | 0,64 a 0,77 |
+| Fora do domínio (Q14–Q17) | 0,38 a 0,61 |
 
-Detalhe por pergunta em [`docs/avaliacao.md`](docs/avaliacao.md).
+O limiar não decide nenhuma das 18 perguntas. As de fora do domínio são recusadas porque
+nenhum candidato cobre 60% dos termos (ponderados por IDF), condição exigida junto com o limiar.
+As respondíveis têm dezenas de candidatos com termo de conteúdo em comum, bem acima do mínimo
+de três. Sozinho, 0,45 não separaria os grupos: Q14, Q15 e Q16 passam dele. Um corte entre 0,61
+e 0,64 separaria, mas é uma faixa de 0,03 definida por quatro perguntas que eu mesmo escrevi.
+Mantive 0,45. Hoje ele só decide quais candidatos sem termo em comum com a pergunta entram como
+evidência nas respondíveis; calibrá-lo exige perguntas novas, de fora do domínio e de borda.
 
 Esses números valem para estas 18 perguntas. Eu as escrevi durante o desenvolvimento e usei
 parte delas para ajustar regras e limiares, então o resultado está otimista. A precisão mede se
@@ -385,7 +428,8 @@ a evidência fala do assunto, e não se ela sustenta a conclusão da resposta.
 ## 8. Exemplos
 
 As respostas às 18 perguntas, com as evidências, estão em
-[`docs/exemplos.md`](docs/exemplos.md). Um trecho:
+[`docs/exemplos.md`](docs/exemplos.md) (fastembed) e
+[`docs/lsa/exemplos.md`](docs/lsa/exemplos.md) (LSA). Um trecho da execução com LSA:
 
 **"Quais são os principais problemas relatados pelos clientes em suas avaliações?"**
 (ampla; filtro inferido: notas 1 a 3; 14.438 avaliações)
@@ -417,8 +461,8 @@ dados transacionais/financeiros agregados, que não estão nos textos das avalia
 
 ## 9. Limitações
 
-- **Resultados com LSA.** É a principal. Tudo na seção 7 precisa ser refeito com
-  `--backend fastembed`, e o limiar de 0,45 calibrado.
+- **Limiar do fastembed não calibrado.** As 18 perguntas não dependem dele (seção 7); falta
+  um conjunto de perguntas de borda para escolher o valor.
 - **Avaliação pequena e feita por mim.** Falta testar com perguntas de outras pessoas e com
   alguém rotulando relevância e fidelidade.
 - **Temas por palavras-chave.** Cerca de 39% das avaliações não caem em nenhum tema, então os

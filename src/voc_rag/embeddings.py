@@ -121,7 +121,7 @@ def create_embedder(backend: str, corpus: list[str] | None = None) -> Embedder:
 
 def load_embedder(index_dir: Path) -> Embedder:
     """Carrega o MESMO embedder usado na indexação (lido do manifest do índice)."""
-    manifest = json.loads((index_dir / "manifest.json").read_text())
+    manifest = json.loads((index_dir / "manifest.json").read_text(encoding="utf-8"))
     backend = manifest["embedding_backend"]
     if backend == "fastembed":
         return FastEmbedEmbedder(manifest.get("embedding_model", config.FASTEMBED_MODEL))

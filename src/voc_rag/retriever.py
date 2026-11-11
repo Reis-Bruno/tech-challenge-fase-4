@@ -65,7 +65,7 @@ class HybridRetriever:
         idx = config.INDEX_DIR
         if not (idx / "manifest.json").exists():
             raise FileNotFoundError("Índice não encontrado. Rode `python -m voc_rag.indexing`.")
-        self.manifest = json.loads((idx / "manifest.json").read_text())
+        self.manifest = json.loads((idx / "manifest.json").read_text(encoding="utf-8"))
         self.df = pd.read_parquet(config.DOCUMENTS_FILE)
         self.embedder = load_embedder(idx)
         self.vectors = np.load(idx / "embeddings.npy")

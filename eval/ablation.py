@@ -79,7 +79,7 @@ def evaluate(retriever: HybridRetriever, questions: list[dict], auto_filters: bo
 
 
 def main() -> None:
-    questions = json.loads((ROOT / "eval" / "questions.json").read_text())
+    questions = json.loads((ROOT / "eval" / "questions.json").read_text(encoding="utf-8"))
     retriever = HybridRetriever()
     backend = retriever.manifest["embedding_backend"]
     n_unanswerable = sum(not q["answerable"] for q in questions)
@@ -105,7 +105,7 @@ def main() -> None:
            "não inferem filtros da pergunta; a recusa nessas variantes vem apenas da regra de "
            "escopo (dados transacionais), pois a verificação de suporte está desligada.", ""]
     out = ROOT / "docs" / "ablacao.md"
-    out.write_text("\n".join(md))
+    out.write_text("\n".join(md), encoding="utf-8")
     print("Relatório:", out)
 
 

@@ -200,7 +200,7 @@ def main() -> None:
     config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     df, report = build_documents()
     df.to_parquet(config.DOCUMENTS_FILE, index=False)
-    config.DATA_REPORT_FILE.write_text(json.dumps(report, ensure_ascii=False, indent=2))
+    config.DATA_REPORT_FILE.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f"\n{len(df)} documentos salvos em {config.DOCUMENTS_FILE}")
 

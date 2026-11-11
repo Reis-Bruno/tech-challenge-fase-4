@@ -33,7 +33,7 @@ def main() -> None:
     ap.add_argument("--examples", default=str(ROOT / "docs" / "exemplos.md"))
     args = ap.parse_args()
 
-    questions = json.loads((ROOT / "eval" / "questions.json").read_text())
+    questions = json.loads((ROOT / "eval" / "questions.json").read_text(encoding="utf-8"))
     pipe = VoCPipeline(provider=args.provider)
     rows, raw = [], []
     for q in questions:
@@ -90,7 +90,7 @@ def main() -> None:
         md.append(f"| {r['id']} | {r['question']} | {'responder' if r['expected'] else 'recusar'} | "
                   f"{'sim' if r['answered'] else 'não'}{'' if r['correct'] else ' ❌'} | {r['mode']} | "
                   f"{r['filters']} | {r['n_evid']} | {p} | {'✔' if r['compliant'] else '✘'} |")
-    Path(args.out).write_text("\n".join(md) + "\n")
+    Path(args.out).write_text("\n".join(md) + "\n", encoding="utf-8")
 
     ex = ["# Exemplos de perguntas e respostas", "",
           f"Gerados por `python eval/run_eval.py` (embeddings `{summary['backend']}`, "
@@ -109,7 +109,7 @@ def main() -> None:
                 ex.append(f"| {e.ref} | {e.score} | {e.purchase_date} | {e.category} | "
                           f"{e.delivery_status} | {txt} |")
             ex.append("")
-    Path(args.examples).write_text("\n".join(ex) + "\n")
+    Path(args.examples).write_text("\n".join(ex) + "\n", encoding="utf-8")
     print(f"Relatórios: {args.out}, {args.examples}")
 
 

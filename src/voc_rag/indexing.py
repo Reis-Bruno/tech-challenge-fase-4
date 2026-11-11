@@ -88,7 +88,7 @@ def build_index(backend: str = config.EMBEDDING_BACKEND) -> None:
         "collection": COLLECTION,
         "built_at": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
+    (out / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     print(json.dumps(manifest, indent=2))
 
 
