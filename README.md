@@ -5,66 +5,47 @@ Tech Challenge da Fase 4 — Pós Tech FIAP (IA para Devs)
 Aplicação de RAG (Retrieval-Augmented Generation) sobre as avaliações escritas do
 [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce).
 Você faz uma pergunta em português, a aplicação busca as avaliações relacionadas e gera uma
-resposta em que cada afirmação cita as avaliações usadas (`[R1]`, `[R2]`…). Se a base não tem
-evidência suficiente, ela recusa e diz por quê.
-
-## Sumário
-
-1. [Ideia geral](#1-ideia-geral)
-2. [Arquitetura](#2-arquitetura)
-3. [Como rodar](#3-como-rodar)
-4. [Base de conhecimento](#4-base-de-conhecimento)
-5. [Pipeline RAG](#5-pipeline-rag)
-6. [Problemas encontrados e como foram resolvidos](#6-problemas-encontrados-e-como-foram-resolvidos)
-7. [Experimentos: o que foi testado e o que não foi](#7-experimentos-o-que-foi-testado-e-o-que-não-foi)
-8. [Exemplos](#8-exemplos)
-9. [Limitações](#9-limitações)
-10. [Estrutura do repositório](#10-estrutura-do-repositório)
+resposta em que cada afirmação cita as avaliações usadas (`[R1]`, `[R2]`…). Sem evidência
+suficiente, ela recusa e diz por quê.
 
 ## 1. Ideia geral
 
-A nota de uma avaliação diz se o cliente ficou satisfeito; o motivo está no comentário. Na
-base do Olist, a nota média das avaliações com texto é 4,0 quando o pedido chega no prazo, 1,94
-quando atrasa e 1,52 quando não é entregue.
+Na base do Olist, a nota média das avaliações com texto é 4,0 quando o pedido chega no prazo,
+1,94 quando atrasa e 1,52 quando não é entregue. A nota diz se o cliente ficou satisfeito; o
+motivo está no comentário.
 
-Comecei pelo RAG mais simples: vetorizar os comentários, buscar os mais parecidos com a
-pergunta e pedir um resumo ao modelo. Ele funcionou para perguntas com assunto definido ("o
-que dizem sobre a entrega?") e falhou em três casos, que acabaram definindo o desenho do
-projeto:
+O RAG mais simples (buscar os comentários mais parecidos com a pergunta e pedir um resumo)
+falhou em três situações, que definiram o desenho do projeto:
 
-- **Perguntas amplas** ("quais os principais problemas?"): a busca devolvia avaliações
-  parecidas com o texto da pergunta, como "Entrega sem problemas".
-- **Perguntas de frequência** ("o que aparece mais?"): dez avaliações não dizem o que é mais
-  comum entre 42 mil.
-- **Perguntas sem resposta na base**: o modelo tende a responder mesmo assim.
-
-A seção 6 conta como cada um foi tratado.
+- **Perguntas amplas** ("quais os principais problemas?") traziam avaliações parecidas com o
+  texto da pergunta, como "Entrega sem problemas". Solução: decompor a pergunta pelos temas
+  mais frequentes.
+- **Perguntas de frequência** não se respondem com dez avaliações. Solução: contar os temas na
+  base inteira e enviar a contagem junto com as evidências.
+- **Perguntas sem resposta na base** recebiam resposta mesmo assim. Solução: verificar se há
+  evidência suficiente antes de chamar o modelo.
 
 ## 2. Arquitetura
 
 ```mermaid
 flowchart TD
     subgraph OFF["Indexação (roda uma vez)"]
-        A[CSVs do Olist] --> B[data_prep.py<br/>integridade · seleção · limpeza<br/>ausentes · metadados]
-        B --> C[(reviews_documents.parquet<br/>42.114 documentos)]
-        C --> D[embeddings.py]
-        D --> E[(ChromaDB<br/>vetores + metadados)]
+        A[CSVs do Olist] --> B[data_prep.py<br/>integridade · limpeza · metadados]
+        B --> C[(42.114 documentos)]
+        C --> D[embeddings.py] --> E[(ChromaDB)]
         C --> F[(BM25)]
     end
-
     subgraph ON["Consulta"]
         Q[Pergunta] --> P[query.py<br/>plano de consulta]
         P -->|fora de escopo| X[Recusa com motivo]
-        P -->|focada| H[Busca vetorial + BM25<br/>com filtros de metadados]
-        H --> R[RRF · suporte · cobertura IDF · MMR]
-        P -->|ampla| T[Uma subconsulta por tema<br/>mais frequente]
-        R --> S{Pelo menos 3 avaliações<br/>sustentam a pergunta?}
+        P -->|focada| H[Busca vetorial + BM25<br/>com filtros · RRF · MMR]
+        P -->|ampla| T[Subconsultas por tema]
+        H --> S{≥ 3 evidências<br/>com suporte?}
         T --> S
         S -->|não| X
-        S -->|sim| K[Contexto: evidências numeradas<br/>+ frequência de temas]
-        K --> G[Modelo de linguagem<br/>ou modo extrativo]
-        G --> V[Validação das citações]
-        V --> O[Resposta + evidências + rastreamento]
+        S -->|sim| K[Contexto + frequência de temas]
+        K --> G[Gemini ou modo extrativo]
+        G --> V[Validação das citações] --> O[Resposta + evidências]
     end
     E -.-> H
     F -.-> H
@@ -72,17 +53,17 @@ flowchart TD
 
 | Etapa do enunciado | Onde está |
 |---|---|
-| Pergunta do usuário | `app/streamlit_app.py`, `src/voc_rag/cli.py` |
-| Processamento da pergunta | `query.py` (`plan_query`) |
+| Processamento da pergunta | `src/voc_rag/query.py` |
 | Embeddings | `embeddings.py` |
-| Recuperação | `retriever.py` (`HybridRetriever`) |
-| Construção do contexto | `generation.py` (`build_context`) |
-| Geração | `generation.py` (`call_llm`, `extractive_answer`) |
-| Resposta fundamentada | `pipeline.py` (`VoCPipeline`) e `check_citations` |
+| Recuperação | `retriever.py` |
+| Construção do contexto e geração | `generation.py` |
+| Orquestração e resposta fundamentada | `pipeline.py` |
+| Interfaces | `app/streamlit_app.py`, `cli.py` |
 
 ## 3. Como rodar
 
-Python 3.10+ e cerca de 1 GB de disco.
+Python 3.10+ e cerca de 1 GB de disco. No Windows/PowerShell, troque `PYTHONPATH=src` por
+`$env:PYTHONPATH = "src"` antes dos comandos.
 
 ```bash
 git clone https://github.com/Reis-Bruno/tech-challenge-fase-4.git
@@ -93,49 +74,32 @@ cd tech-challenge-fase-4
 ```
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-```
-
-```bash
 pip install -r requirements.txt
 ```
 
-```bash
-cp .env.example .env
-```
-
-**1. Dados.** O script usa `kagglehub` e precisa das credenciais do Kaggle
-(`~/.kaggle/kaggle.json`). Se preferir, baixe o zip pelo site e extraia os CSVs em `data/raw/`.
+**Dados.** Baixa a base do Kaggle com `kagglehub` (na nossa execução, não pediu credenciais).
+Alternativa: baixar o zip pelo site e extrair os CSVs em `data/raw/`.
 
 ```bash
 python scripts/download_data.py
 ```
 
-**2. Base de conhecimento.**
+**Base e índices.** O primeiro uso do `fastembed` baixa o modelo (cerca de 220 MB) do
+HuggingFace.
 
 ```bash
 PYTHONPATH=src python -m voc_rag.data_prep
 ```
 
-**3. Índices.** O backend `fastembed` baixa o modelo de embeddings (cerca de 220 MB) do
-HuggingFace na primeira vez. Sem acesso ao HuggingFace, use `--backend lsa`.
-
 ```bash
 PYTHONPATH=src python -m voc_rag.indexing --backend fastembed
 ```
 
-**4. Modelo de linguagem.** O padrão é o Gemini. Crie uma chave em
-<https://aistudio.google.com/apikey> e coloque no `.env`:
+**Modelo de linguagem.** Crie uma chave em <https://aistudio.google.com/apikey> e grave no
+`.env` na forma `GEMINI_API_KEY=sua-chave`. Sem chave, a aplicação usa o modo extrativo, que
+organiza as evidências por tema sem redigir conclusões.
 
-```bash
-echo "GEMINI_API_KEY=sua-chave" >> .env
-```
-
-Sem chave, a aplicação roda no modo extrativo: organiza as evidências por tema e transcreve os
-trechos, sem redigir conclusões. Para outro provedor, defina `VOC_LLM_PROVIDER` como `openai`,
-`anthropic` ou `ollama` (e `VOC_LLM_MODEL`, se quiser trocar o modelo).
-
-**5. Aplicação.**
+**Uso.**
 
 ```bash
 streamlit run app/streamlit_app.py
@@ -145,18 +109,18 @@ streamlit run app/streamlit_app.py
 PYTHONPATH=src python -m voc_rag.cli "O que os clientes relatam sobre problemas relacionados à entrega?"
 ```
 
-**6. Testes e experimentos.**
+**Testes e experimentos.**
 
 ```bash
 python -m pytest -q
 ```
 
 ```bash
-python eval/run_eval.py
+python eval/ablation.py
 ```
 
 ```bash
-python eval/ablation.py
+python eval/run_eval.py --provider gemini
 ```
 
 O notebook [`notebooks/demonstracao_pipeline.ipynb`](notebooks/demonstracao_pipeline.ipynb)
@@ -164,331 +128,138 @@ mostra as etapas do pipeline com as saídas já executadas.
 
 ## 4. Base de conhecimento
 
-Código em [`src/voc_rag/data_prep.py`](src/voc_rag/data_prep.py).
-
-### De 99.224 avaliações a 42.114 documentos
-
 | Etapa | Quantidade |
 |---|---|
 | Avaliações no CSV | 99.224 |
 | Com título ou comentário | 42.687 |
-| − `review_id` repetido (a mesma avaliação ligada a mais de um pedido) | −317 |
+| − `review_id` repetido (mesma avaliação em mais de um pedido) | −317 |
 | − textos sem nenhuma palavra (só pontuação, números ou símbolos) | −256 |
 | **Documentos indexados** | **42.114** |
 
-As 56.537 avaliações sem texto ficam de fora porque não há o que recuperar nelas. A diferença
-entre as 42.687 avaliações com texto e os 42.114 documentos vem das duas remoções da tabela:
-317 + 256 = 573.
-
-### Verificação de integridade
-
-Antes de transformar qualquer coisa, o script confere as chaves entre as tabelas e a leitura do
-CSV. O que ele encontrou na base:
-
-| Verificação | Ocorrências | O que fiz com isso |
-|---|---|---|
-| Avaliações sem pedido, pedidos sem cliente, itens sem produto | 0 | nada a tratar |
-| Notas fora de 1–5 | 0 | confirma que o CSV foi lido sem desalinhar colunas |
-| Comentários com quebra de linha | 3.852 | exigem leitor que respeite campos entre aspas (o do pandas respeita) |
-| Pedidos com mais de um item | 9.803 | categoria agregada por pedido antes do join, para não duplicar avaliações |
-| Pedidos sem itens / produtos sem categoria | 775 / 610 | categoria `desconhecida` |
-| `review_id` em mais de um pedido | 789 | um documento por `review_id` |
-
-### Decisões de preparação
-
-- **Uma avaliação = um documento, sem dividir em trechos.** O maior texto tem cerca de 230
-  caracteres e a mediana é 54. Cada avaliação cabe inteira em um vetor, e dividir só
-  atrapalharia a ligação entre evidência e avaliação.
-- **Texto do documento** = título + comentário (o título é omitido quando já está no
-  comentário).
-- **Limpeza leve no texto exibido e vetorizado**: tiro quebras de linha, espaços e pontuação
-  repetidos, e mantenho acentos e maiúsculas, para a evidência aparecer como o cliente
-  escreveu. A normalização pesada (minúsculas, sem acento, radicais) vale só para o BM25 e para
-  a contagem de temas.
-- **Negações não são stopwords.** "Não chegou" e "chegou" não podem virar a mesma coisa.
-- **Textos iguais de clientes diferentes** ("Muito bom", cerca de 6 mil casos) ficam no índice,
-  porque são opiniões independentes. Na resposta eles aparecem uma vez, com a contagem de
-  repetições. Textos com menos de 15 caracteres não entram como evidência.
-- **Ausentes**: nenhuma avaliação com texto é descartada por falta de metadado. Categoria
-  ausente (1.105 documentos) vira `desconhecida`; pedido sem data de entrega (1.867) vira
-  `nao_entregue`.
-
-### Metadados
-
-Cada documento carrega nota, data e ano da compra, situação da entrega (`no_prazo`, `atrasado`,
-`nao_entregue`), atraso em dias, categoria, UF e valor do pedido. O atraso é a data de entrega
-menos a data **estimada**, e não o tempo total de entrega: o que o cliente reclama é do prazo
-descumprido.
+- **Integridade.** Antes de transformar os dados, o script confere chaves e leitura do CSV:
+  nenhuma nota fora de 1–5, apesar de 3.852 comentários com quebra de linha; categoria agregada
+  por pedido, porque 9.803 pedidos têm mais de um item e um join direto duplicaria avaliações.
+- **Uma avaliação = um documento.** O maior texto tem cerca de 230 caracteres; dividir em
+  trechos só atrapalharia a ligação entre evidência e avaliação.
+- **Limpeza leve** no texto exibido (acentos preservados). A normalização pesada (minúsculas,
+  sem acento, radicais) vale só para o BM25 e os temas. Negações nunca são removidas.
+- **Ausentes.** Nenhuma avaliação com texto é descartada: categoria ausente vira
+  `desconhecida`, pedido sem data de entrega vira `nao_entregue`.
+- **Metadados:** nota, data da compra, situação da entrega, atraso em relação à data
+  estimada, categoria, UF e valor do pedido.
 
 ## 5. Pipeline RAG
 
-**Plano de consulta** (`query.py`). A pergunta passa por regras que extraem:
+1. **Plano de consulta** (`query.py`). Regras extraem a intenção e os filtros (problemas →
+   notas 1 a 3; elogios → 4 e 5; ano; categoria; "entregues com atraso"), sinônimos para o
+   BM25 e os termos de conteúdo. Sem termo de conteúdo, a pergunta é tratada como ampla.
+   Perguntas sobre faturamento ou número de pedidos são recusadas aqui. Usei regras, e não um
+   LLM, para que a mesma pergunta gere sempre o mesmo plano, visível na interface.
+2. **Recuperação** (`retriever.py`). Na pergunta focada: busca vetorial no ChromaDB e BM25 (60
+   candidatos cada, com os filtros), fusão por RRF, verificação de suporte, reordenação pela
+   cobertura dos termos (ponderada por IDF) e escolha de 10 evidências por MMR. Na pergunta
+   ampla: duas evidências para cada um dos 4 temas mais frequentes da população filtrada.
+3. **Contexto e geração** (`generation.py`). Evidências numeradas com seus metadados e um
+   bloco de frequência de temas. O prompt exige citar as evidências e declarar falta de
+   evidência. Depois da geração, citações a evidências inexistentes são removidas.
+4. **Recusa.** O modelo não é chamado se a pergunta pede dados que não estão nos textos, se
+   nenhuma avaliação cobre 60% dos seus termos (perguntas de fora do domínio) ou se há menos de
+   três avaliações com suporte.
 
-- a intenção (problemas ou elogios) e os filtros que ela implica: problemas → notas 1 a 3
-  (1 e 2 se a pergunta fala em "insatisfeitos" ou "nota baixa"); elogios → notas 4 e 5;
-- filtros explícitos: "nota N", ano, categoria por apelido ("celular" → `telefonia`),
-  "entregues com atraso";
-- sinônimos para o BM25 ("entrega" ganha "prazo", "atraso", "correios"…); a busca vetorial usa
-  a pergunta original;
-- os termos de conteúdo: o que sobra depois de tirar palavras como "quais", "principais",
-  "clientes", "problemas". Se não sobra nada, a pergunta é **ampla**; se sobra, é **focada**;
-- o escopo: perguntas sobre faturamento ou número de pedidos são recusadas aqui.
-
-Usei regras em vez de um LLM nessa etapa porque é ela que decide quais dados chegam ao modelo.
-Com regras, a mesma pergunta gera sempre o mesmo plano, e a interface mostra cada regra
-aplicada. O preço é que formulações que não previ podem não acionar os filtros.
-
-**Recuperação** (`retriever.py`). Para pergunta focada:
-
-1. busca vetorial no ChromaDB e busca BM25, 60 candidatos cada, já com os filtros aplicados;
-2. fusão das duas listas por RRF (Reciprocal Rank Fusion), que usa só as posições;
-3. textos idênticos agrupados e textos muito curtos descartados;
-4. verificação de suporte: a avaliação precisa ter um termo de conteúdo da pergunta ou
-   similaridade acima do limiar;
-5. reordenação pela cobertura dos termos da pergunta, ponderada por IDF;
-6. escolha das dez finais por MMR, que evita evidências quase iguais.
-
-Para pergunta ampla, o sistema conta os temas na população filtrada, pega os quatro mais
-frequentes e busca duas avaliações para cada um, entre as que contêm o tema. Os 14 temas
-(atraso, não recebido, produto diferente, defeito, atendimento, entrega rápida, qualidade…)
-são padrões de palavras-chave definidos em [`themes.py`](src/voc_rag/themes.py).
-
-**Contexto e geração** (`generation.py`). O modelo recebe as evidências numeradas com seus
-metadados e um bloco com a frequência dos temas:
-
-```
-[R2] (nota 3/5 | compra 2018-02-17 | categoria bebes | entregue com 9 dia(s) de atraso | UF SP)
-"Produto com o prazo de entrega atrasado"
-```
-
-O prompt exige usar só o contexto, citar as evidências em cada afirmação, não generalizar a
-partir de uma avaliação e dizer quando não há evidência. A temperatura é 0,1. Depois da
-geração, `check_citations` troca citações a evidências que não existem por um aviso visível e
-marca respostas sem citação.
-
-**Recusa.** A aplicação não chama o modelo quando: a pergunta pede dados que não estão nos
-textos; a pergunta é de fora do domínio e nenhuma avaliação cobre ao menos 60% dos seus termos
-(ponderados por IDF); há menos de três avaliações com suporte; ou os filtros não deixam nenhuma
-avaliação.
-
-**Metadados na busca.** Os filtros entram na própria consulta (`where` do ChromaDB e máscara no
-BM25), e não depois. "O que elogiam em produtos de beleza?" já busca só entre notas 4 e 5 da
-categoria `beleza_saude`.
-
-## 6. Problemas encontrados e como foram resolvidos
-
-Quase todos os mecanismos do projeto nasceram de um erro que apareceu ao ler os resultados.
-
-| O que deu errado | Como percebi | O que mudou |
-|---|---|---|
-| Pergunta "principais problemas" trazia "Entrega sem problemas" e "sem maiores problemas" | lendo as evidências da primeira versão | perguntas amplas passaram a ser decompostas por tema |
-| Não dava para responder "o que é mais frequente" | dez evidências não representam 14 mil avaliações negativas | contagem de temas sobre toda a população filtrada, enviada junto com as evidências |
-| "Como fazer um bolo de chocolate?" era aceita como pergunta válida | teste com perguntas fora do domínio; muitas avaliações têm o verbo "fazer" ("quero fazer a troca") | cobertura ponderada por IDF: "fazer" pesa pouco, "bolo" e "chocolate" pesam muito |
-| Com o backend LSA, "capital da França" tinha como mais parecida a avaliação "Acima da média.." | o vetor da pergunta era dominado por "qual", "a", "da" | o LSA passou a usar o mesmo pré-processamento do BM25 (sem stopwords, com radicais) |
-| "Clientes insatisfeitos" não era reconhecida como pergunta negativa | "insatisfeitos" contém "satisfeit", que eu usava como pista positiva | a pista positiva só vale no início da palavra |
-| Pergunta sobre "produto diferente do anunciado" trazia "Produto recebido." | o termo "receber" dominava a busca; metade das evidências era irrelevante | reordenação pela cobertura de todos os termos da pergunta |
-| "Sem defeitos" era contado como defeito | conferindo os temas atribuídos às evidências | negações explícitas são removidas antes de aplicar os padrões |
-| 45,9% das avaliações de pedidos **entregues** com atraso diziam "não recebi" | o número parecia alto demais e fui conferir | muitas avaliações são escritas antes da entrega; o tema virou "não recebido (até a data da avaliação)" |
-| Alerta falso de "resposta sem citação" | o Gemini escreve `[R1, R2]`, e o validador só reconhecia `[R1]` | o validador normaliza citações agrupadas |
-| O modelo misturava dois percentuais na mesma frase | o contexto tinha dois blocos de estatísticas, sobre bases diferentes | o contexto passou a ter um bloco só |
-| `gemini-2.5-flash` não existia mais e `gemini-3.8-flash` devolvia erro 503 | primeira chamada real à API | padrão `gemini-3.5-flash`, com nova tentativa e modelo reserva |
-
-### Escolhas de tecnologia
-
-| Escolha | Por quê | O que descartei |
-|---|---|---|
-| Embeddings `paraphrase-multilingual-MiniLM-L12-v2` via fastembed | suporta português, roda em CPU sem PyTorch, sem custo por chamada | modelos maiores (pouco ganho para textos de 50 caracteres) e embeddings por API |
-| Backend alternativo LSA (TF-IDF + SVD) | permite indexar sem acesso ao HuggingFace | — |
-| ChromaDB | local, sem servidor, com filtro de metadados na própria busca | FAISS (sem filtro pronto), Qdrant e pgvector (infraestrutura a mais) |
-| Busca híbrida com RRF | avaliações têm paráfrases e também termos exatos, como nome de produto | combinar escores, que exigiria calibrar escalas diferentes |
-| Temas por palavras-chave | contagem reproduzível sobre a base inteira, sem custo | clustering e classificação por LLM |
-| Recusa antes de chamar o LLM | não depende de o modelo obedecer ao prompt | deixar só a instrução no prompt |
-
-Parâmetros em `config.RetrievalConfig`: 60 candidatos por fonte, RRF com k = 60, dez
-evidências, λ = 0,7 no MMR, mínimo de três evidências, limiar de similaridade 0,20 (LSA) e
-0,45 (fastembed).
-
-## 7. Experimentos: o que foi testado e o que não foi
-
-Todos os resultados desta seção vêm de uma execução na minha máquina, com a base baixada do
-Kaggle por `scripts/download_data.py`, embeddings **fastembed** e geração pelo **Gemini**.
-
-### O que foi executado e o que é só expectativa
-
-| Item | Situação |
+| Escolha | Motivo |
 |---|---|
-| `scripts/download_data.py` | **Testado.** O `kagglehub` baixou o dataset público (versão 2) sem credenciais |
-| Base de conhecimento e verificações de integridade | **Testado** (números da seção 4) |
-| Pipeline completo com fastembed e Gemini (`gemini-3.5-flash`; o reserva `gemini-3.5-flash-lite` respondeu parte das perguntas) | **Testado** nas 18 perguntas |
-| Ablação dos componentes da recuperação | **Testado** |
-| Modo extrativo (sem LLM) e 16 testes automatizados | **Testado** |
-| Interface Streamlit | **Testado** só com o utilitário de testes do Streamlit (carrega e responde sem erro) |
-| Backend LSA | **Implementado, sem resultados publicados.** As execuções com ele usaram uma cópia da base obtida fora do Kaggle e foram descartadas |
-| Limiar de similaridade 0,45 do fastembed | **Não calibrado.** Nenhuma decisão das 18 perguntas depende dele (ver abaixo) |
-| "Busca híbrida é melhor que BM25 sozinho" | **Não confirmada.** BM25 sozinho teve precisão maior (0,79 × 0,75); a híbrida ganhou em polaridade (0,76 × 0,62) |
-| Provedores OpenAI, Anthropic e Ollama | **Implementados, nunca executados** |
-| Precisão dos padrões de tema | **Não medida** |
-| Fidelidade das respostas geradas | **Conferida à mão em poucas respostas**, sem rotulagem sistemática |
-| Desempenho em perguntas fora das 18 | **Desconhecido** |
+| Embeddings `paraphrase-multilingual-MiniLM-L12-v2` (fastembed) | suporta português e roda em CPU, sem custo por chamada |
+| ChromaDB | local e com filtro de metadados na própria busca |
+| Busca híbrida com RRF | paráfrases (vetorial) e termos exatos (BM25), sem calibrar escalas |
+| Temas por palavras-chave | contagem reproduzível sobre a base inteira |
+| Recusa antes do LLM | não depende de o modelo obedecer ao prompt |
 
-As 18 perguntas estão em [`eval/questions.json`](eval/questions.json): doze respondíveis
-(incluindo todos os exemplos do enunciado) e seis que devem ser recusadas.
+## 6. Problemas encontrados
 
-### Ablação da recuperação (sem LLM)
-
-`eval/ablation.py` começa com busca vetorial pura e liga um componente por vez.
-
-| Variante | Precisão | Polaridade | Redundância (↓) | Temas | Recusas (de 6) |
-|---|---|---|---|---|---|
-| A. Só vetorial (top-k) | 0,71 | 0,82 | 0,67 | 3,1 | 2 |
-| B. Só BM25 | 0,79 | 0,62 | 0,47 | 3,0 | 2 |
-| C. Híbrida (RRF) | 0,75 | 0,76 | 0,57 | 3,0 | 2 |
-| D. C + filtros inferidos | 0,80 | 1,00 | 0,58 | 2,9 | 2 |
-| E. D + suporte e cobertura IDF | 0,84 | 1,00 | 0,60 | 3,2 | 6 |
-| F. E + MMR | 0,82 | 1,00 | 0,56 | 3,3 | 6 |
-| G. Pipeline completo (F + decomposição por tema) | 0,93 | 1,00 | 0,56 | 4,4 | 6 |
-
-*Precisão*: fração das evidências que contêm termos do assunto. *Polaridade*: fração das
-evidências com nota coerente com a pergunta. *Redundância*: cosseno médio entre as evidências.
-*Temas*: temas distintos nas evidências. Relatório em [`docs/ablacao.md`](docs/ablacao.md).
-
-O que a tabela mostra:
-
-- Sem filtros, cerca de um quarto das evidências de perguntas sobre problemas ou elogios tinha
-  a nota errada para a pergunta (C, polaridade 0,76). Os filtros corrigem isso e sobem a
-  precisão (0,75 → 0,80).
-- A verificação de suporte é o que recusa as quatro perguntas de fora do domínio (D → E) e
-  também sobe a precisão (0,80 → 0,84).
-- O MMR reduz pouco a repetição (0,60 → 0,56) e custa um pouco de precisão (0,84 → 0,82).
-- A decomposição por tema dá o maior salto de precisão (0,82 → 0,93), concentrado nas cinco
-  perguntas amplas.
-
-O que a tabela **não** permite concluir:
-
-- A polaridade 1,00 a partir de D é efeito direto do filtro, não um achado.
-- O salto de G está inflado: nas perguntas amplas as evidências são escolhidas por padrões de
-  tema parecidos com os que medem a precisão.
-- B melhor que C em precisão contraria a justificativa da busca híbrida. Parte pode vir do
-  proxy, que é léxico e premia evidências com a palavra exata; não medi relevância de outro
-  jeito. Em polaridade a híbrida é melhor (0,76 × 0,62), e não há variante que compare BM25 e
-  híbrida com filtros, suporte e MMR ligados.
-- O ganho do MMR é pequeno nesta configuração; mantê-lo é uma escolha de diversidade, não algo
-  que a tabela demonstre.
-
-### Avaliação de ponta a ponta (com Gemini)
-
-| Métrica | Resultado |
+| Problema | O que mudou |
 |---|---|
-| Decisão responder/recusar correta | 18 de 18 |
-| Precisão das evidências (mesmo proxy da ablação) | 0,93 |
-| Evidências respeitando os filtros | 100% |
-| Respostas com citação inexistente | 0 de 12 |
-| Respostas sem citação | 0 de 12 |
-| Tempo médio por pergunta | cerca de 12 s, quase todo na chamada ao Gemini |
+| "Principais problemas" trazia "Entrega sem problemas" | decomposição por tema nas perguntas amplas |
+| "Como fazer um bolo de chocolate?" era aceita (muitas avaliações têm o verbo "fazer") | cobertura ponderada por IDF para perguntas fora do domínio |
+| "Clientes insatisfeitos" contava como pergunta positiva ("insatisfeitos" contém "satisfeit") | pista positiva só no início da palavra |
+| "Sem defeitos" era contado como defeito | negações explícitas removidas antes de contar temas |
+| 45,9% das avaliações de pedidos entregues com atraso diziam "não recebi" | muitas são escritas antes da entrega; o tema virou "não recebido (até a data da avaliação)" |
+| Alerta falso de resposta sem citação (o Gemini escreve `[R1, R2]`) | o validador passou a aceitar citações agrupadas |
+| Modelo do Gemini indisponível ou sobrecarregado (erro 503) | nova tentativa e troca para um modelo reserva |
 
-Detalhe por pergunta em [`docs/avaliacao.md`](docs/avaliacao.md).
+## 7. Resultados
 
-A precisão fica abaixo de 1,00 nas quatro perguntas amplas Q01, Q04, Q07 e Q08 (entre 0,75 e
-0,88). Li as seis evidências reprovadas: todas são relevantes, mas usam palavras que o padrão do
-proxy não tem ("produto não **entregue**", "ainda não **recebemos**", "não **corresponde** à
-descrição", "muito bem **embalado**"). O modelo neural escolhe paráfrases que o proxy léxico não
-reconhece. Não alterei os padrões para não ajustar a métrica ao resultado.
+Execução com a base baixada do Kaggle, embeddings fastembed e geração pelo Gemini, em 18
+perguntas ([`eval/questions.json`](eval/questions.json)): 12 respondíveis, incluindo todos os
+exemplos do enunciado, e 6 que devem ser recusadas.
 
-### Limiar de similaridade do fastembed
+**Ablação da recuperação** ([`docs/ablacao.md`](docs/ablacao.md)), sem LLM:
 
-Para cada pergunta, olhei a similaridade entre ela e os candidatos da busca focada:
+| Variante | Precisão | Polaridade | Recusas (de 6) |
+|---|---|---|---|
+| A. Só vetorial (top-k) | 0,71 | 0,82 | 2 |
+| B. Só BM25 | 0,79 | 0,62 | 2 |
+| C. Híbrida (RRF) | 0,75 | 0,76 | 2 |
+| D. C + filtros inferidos | 0,80 | 1,00 | 2 |
+| E. D + suporte e cobertura IDF | 0,84 | 1,00 | 6 |
+| F. E + MMR | 0,82 | 1,00 | 6 |
+| G. Pipeline completo (F + decomposição por tema) | 0,93 | 1,00 | 6 |
 
-| Grupo | Similaridade máxima |
-|---|---|
-| Respondíveis focadas (Q02, Q05, Q06, Q09–Q12) | 0,64 a 0,77 |
-| Fora do domínio (Q14–Q17) | 0,38 a 0,61 |
+*Precisão*: fração das evidências que contêm termos do assunto (proxy léxico). *Polaridade*:
+fração das evidências com nota coerente com a pergunta.
 
-O limiar não decide nenhuma das 18 perguntas. As de fora do domínio são recusadas porque
-nenhum candidato cobre 60% dos termos (ponderados por IDF), condição exigida junto com o limiar.
-As respondíveis têm dezenas de candidatos com termo de conteúdo em comum, bem acima do mínimo
-de três. Sozinho, 0,45 não separaria os grupos: Q14, Q15 e Q16 passam dele. Um corte entre 0,61
-e 0,64 separaria, mas é uma faixa de 0,03 definida por quatro perguntas que eu mesmo escrevi.
-Mantive 0,45. Hoje ele só decide quais candidatos sem termo em comum com a pergunta entram como
-evidência nas respondíveis; calibrá-lo exige perguntas novas, de fora do domínio e de borda.
+Os filtros corrigem a nota das evidências, a verificação de suporte é o que recusa as
+perguntas de fora do domínio e a decomposição por tema dá o maior ganho de precisão. Três
+ressalvas: a polaridade 1,00 é efeito direto do filtro; o ganho de G está inflado, porque os
+padrões que escolhem as evidências se parecem com os que medem a precisão; e **o BM25 sozinho
+teve precisão maior que a busca híbrida**, de modo que a vantagem da híbrida não foi
+confirmada (ela só foi melhor em polaridade).
 
-Esses números valem para estas 18 perguntas. Eu as escrevi durante o desenvolvimento e usei
-parte delas para ajustar regras e limiares, então o resultado está otimista. A precisão mede se
-a evidência fala do assunto, e não se ela sustenta a conclusão da resposta.
+**Avaliação de ponta a ponta** ([`docs/avaliacao.md`](docs/avaliacao.md)): 18 de 18 decisões
+corretas entre responder e recusar, precisão das evidências de 0,93, nenhuma citação inválida
+e nenhuma resposta sem citação. Cada resposta leva cerca de 12 s, quase tudo na chamada ao
+Gemini.
 
-## 8. Exemplos
-
-As respostas às 18 perguntas, com as evidências, estão em
-[`docs/exemplos.md`](docs/exemplos.md). Um trecho:
-
-**"Quais são os principais problemas relatados pelos clientes em suas avaliações?"**
-(ampla; filtro inferido: notas 1 a 3; 14.438 avaliações)
+**Exemplo** (as 18 respostas estão em [`docs/exemplos.md`](docs/exemplos.md)) — "Quais são os
+principais problemas relatados pelos clientes em suas avaliações?":
 
 ```text
 Os principais problemas relatados pelos clientes envolvem atrasos e não entrega de pedidos,
 envio de produtos errados ou de baixa qualidade, além de falhas no atendimento e cancelamentos
 sem justificativa. [...]
-
-- Não entrega e atrasos de envio: Clientes reclamam da falta de recebimento dos produtos,
-  demoras no prazo de entrega e do fato de serem cobrados a avaliar itens que ainda não
-  chegaram [R1] [R2] [R3] [R4]. [...] o tema "Produto não recebido (até a data da avaliação)"
-  representa 26,6% (3.845 avaliações) e "Atraso / demora na entrega" representa 13,1%
-  (1.896 avaliações).
-- Recebimento de produto errado ou divergente: [...] incluindo divergências de cor e tamanho
-  [R6] [R7] [R8]. O tema "Produto errado / diferente do anunciado" soma 8,1% (1.173
-  avaliações) da base filtrada.
-- Qualidade insatisfatória e problemas no pós-venda: [...] [R3] [R7] [...] [R4] [...] [R5].
-
-Limitações: A análise reflete uma amostra de 8 avaliações qualitativas e estatísticas de
-palavras-chave restritas a pedidos com notas de 1 a 3.
+- Não entrega e atrasos de envio: [...] [R1] [R2] [R3] [R4]. [...] o tema "Produto não
+  recebido (até a data da avaliação)" representa 26,6% (3.845 avaliações) e "Atraso / demora
+  na entrega" representa 13,1% (1.896 avaliações).
+- Recebimento de produto errado ou divergente: [...] [R6] [R7] [R8]. [...]
 ```
 
-**"Qual foi o faturamento da Olist em 2018?"**
+## 8. Limitações
 
-```text
-Não há evidências suficientes na base de avaliações para responder. Motivo: A pergunta exige
-dados transacionais/financeiros agregados, que não estão nos textos das avaliações [...]
-```
+- **Avaliação pequena e feita por mim.** As 18 perguntas foram escritas durante o
+  desenvolvimento e usadas para ajustar regras; os números estão otimistas. A precisão mede se
+  a evidência fala do assunto, não se sustenta a conclusão.
+- **Limiar de similaridade não calibrado.** O valor de 0,45 não decide nenhuma das 18
+  perguntas; calibrá-lo exige perguntas novas, de borda.
+- **Temas por palavras-chave.** Cerca de 39% das avaliações não caem em nenhum tema, então os
+  percentuais são um piso.
+- **Regras de interpretação** cobrem as formulações que previ; fora delas, os filtros podem
+  ser aplicados manualmente na interface.
+- **Não testados:** os provedores OpenAI, Anthropic e Ollama estão implementados, mas nunca
+  foram executados. O backend LSA existe como alternativa sem HuggingFace, sem resultados
+  publicados.
+- **Escala:** tudo roda localmente, com índices em memória, adequado a dezenas de milhares de
+  avaliações.
 
-## 9. Limitações
-
-- **Limiar do fastembed não calibrado.** As 18 perguntas não dependem dele (seção 7); falta
-  um conjunto de perguntas de borda para escolher o valor.
-- **Avaliação pequena e feita por mim.** Falta testar com perguntas de outras pessoas e com
-  alguém rotulando relevância e fidelidade.
-- **Temas por palavras-chave.** Cerca de 39% das avaliações (`pct_sem_nenhum_tema` no relatório da base) não caem em nenhum tema, então os
-  percentuais são um piso. Negações longe do termo ainda enganam os padrões.
-- **Negação na busca focada.** "Entrega sem problemas" (nota 3) ainda pode aparecer numa
-  pergunta sobre problemas de entrega: tem os termos e passa no filtro de nota.
-- **Regras de interpretação.** Cobrem as formulações que previ. Fora delas, o usuário precisa
-  aplicar os filtros na barra lateral. Incluir a nota 3 nas perguntas sobre problemas traz
-  reclamações parciais e, junto, alguns elogios moderados.
-- **Sem inferência de causa.** A aplicação relata o que os clientes dizem; não conclui se a
-  culpa foi da transportadora ou do vendedor quando eles não dizem.
-- **Escala.** Tudo roda local, com o BM25 e os vetores em memória. Serve para dezenas de
-  milhares de documentos. Num volume maior, o caminho seria uma plataforma como o Databricks
-  (tabelas Delta, busca vetorial gerenciada, endpoint de modelo), que não implementei.
-
-## 10. Estrutura do repositório
+## 9. Estrutura
 
 ```
-├── app/streamlit_app.py        interface web
-├── src/voc_rag/
-│   ├── config.py               caminhos, provedores e parâmetros
-│   ├── text.py                 limpeza, normalização e radicais
-│   ├── data_prep.py            integridade e construção da base
-│   ├── embeddings.py           backends fastembed e LSA
-│   ├── indexing.py             ChromaDB, BM25 e matriz de vetores
-│   ├── query.py                plano de consulta, filtros e escopo
-│   ├── themes.py               temas e frequências
-│   ├── retriever.py            recuperação e suficiência
-│   ├── generation.py           contexto, prompt, provedores e citações
-│   ├── pipeline.py             orquestração
-│   └── cli.py                  linha de comando
-├── notebooks/                  demonstração executada do pipeline
-├── eval/                       perguntas, avaliação e ablação
-├── docs/                       resultados, exemplos e roteiro do vídeo
-├── scripts/download_data.py    download via kagglehub
-└── tests/                      testes unitários e de integração
+├── app/streamlit_app.py      interface web
+├── src/voc_rag/              data_prep, embeddings, indexing, query, themes,
+│                             retriever, generation, pipeline, cli
+├── notebooks/                demonstração executada do pipeline
+├── eval/                     perguntas, avaliação e ablação
+├── docs/                     resultados, exemplos e roteiro do vídeo
+├── scripts/download_data.py  download da base via kagglehub
+└── tests/                    testes unitários e de integração
 ```
 
 Tecnologias: Python, pandas, scikit-learn, fastembed, ChromaDB, rank-bm25, Streamlit, Google
