@@ -160,7 +160,7 @@ python eval/ablation.py
 ```
 
 O notebook [`notebooks/demonstracao_pipeline.ipynb`](notebooks/demonstracao_pipeline.ipynb)
-mostra as etapas do pipeline com as saídas já executadas.
+percorre as etapas do pipeline. Execute-o depois de construir a base e os índices.
 
 ## 4. Base de conhecimento
 
@@ -284,7 +284,7 @@ Quase todos os mecanismos do projeto nasceram de um erro que apareceu ao ler os 
 | Pergunta "principais problemas" trazia "Entrega sem problemas" e "sem maiores problemas" | lendo as evidências da primeira versão | perguntas amplas passaram a ser decompostas por tema |
 | Não dava para responder "o que é mais frequente" | dez evidências não representam 14 mil avaliações negativas | contagem de temas sobre toda a população filtrada, enviada junto com as evidências |
 | "Como fazer um bolo de chocolate?" era aceita como pergunta válida | teste com perguntas fora do domínio; muitas avaliações têm o verbo "fazer" ("quero fazer a troca") | cobertura ponderada por IDF: "fazer" pesa pouco, "bolo" e "chocolate" pesam muito |
-| "Capital da França" tinha similaridade 0,99 com "Acima da média.." | o vetor LSA da pergunta era dominado por "qual", "a", "da" | o LSA passou a usar o mesmo pré-processamento do BM25 (sem stopwords, com radicais) |
+| Com o backend LSA, "capital da França" tinha como mais parecida a avaliação "Acima da média.." | o vetor da pergunta era dominado por "qual", "a", "da" | o LSA passou a usar o mesmo pré-processamento do BM25 (sem stopwords, com radicais) |
 | "Clientes insatisfeitos" não era reconhecida como pergunta negativa | "insatisfeitos" contém "satisfeit", que eu usava como pista positiva | a pista positiva só vale no início da palavra |
 | Pergunta sobre "produto diferente do anunciado" trazia "Produto recebido." | o termo "receber" dominava a busca; metade das evidências era irrelevante | reordenação pela cobertura de todos os termos da pergunta |
 | "Sem defeitos" era contado como defeito | conferindo os temas atribuídos às evidências | negações explícitas são removidas antes de aplicar os padrões |
@@ -298,7 +298,7 @@ Quase todos os mecanismos do projeto nasceram de um erro que apareceu ao ler os 
 | Escolha | Por quê | O que descartei |
 |---|---|---|
 | Embeddings `paraphrase-multilingual-MiniLM-L12-v2` via fastembed | suporta português, roda em CPU sem PyTorch, sem custo por chamada | modelos maiores (pouco ganho para textos de 50 caracteres) e embeddings por API |
-| Backend alternativo LSA (TF-IDF + SVD) | roda sem HuggingFace; foi o que consegui executar | — |
+| Backend alternativo LSA (TF-IDF + SVD) | permite indexar sem acesso ao HuggingFace | — |
 | ChromaDB | local, sem servidor, com filtro de metadados na própria busca | FAISS (sem filtro pronto), Qdrant e pgvector (infraestrutura a mais) |
 | Busca híbrida com RRF | avaliações têm paráfrases e também termos exatos, como nome de produto | combinar escores, que exigiria calibrar escalas diferentes |
 | Temas por palavras-chave | contagem reproduzível sobre a base inteira, sem custo | clustering e classificação por LLM |
@@ -310,23 +310,25 @@ evidências, λ = 0,7 no MMR, mínimo de três evidências, limiar de similarida
 
 ## 7. Experimentos: o que foi testado e o que não foi
 
+Todos os resultados desta seção vêm de uma execução na minha máquina, com a base baixada do
+Kaggle por `scripts/download_data.py`, embeddings **fastembed** e geração pelo **Gemini**.
+
 ### O que foi executado e o que é só expectativa
 
 | Item | Situação |
 |---|---|
-| Pipeline completo com embeddings **fastembed** e geração pelo **Gemini** (`gemini-3.5-flash`; o reserva `gemini-3.5-flash-lite` respondeu parte das perguntas) | **Testado** nas 18 perguntas |
-| Pipeline completo com embeddings **LSA** e geração pelo **Gemini** (`gemini-3.5-flash`) | **Testado** nas 18 perguntas |
-| Modo extrativo (sem LLM) | **Testado** |
-| Ablação dos componentes da recuperação, com LSA e com fastembed | **Testado** |
-| Verificações de integridade e 16 testes automatizados | **Testado** |
+| `scripts/download_data.py` | **Testado.** O `kagglehub` baixou o dataset público (versão 2) sem credenciais |
+| Base de conhecimento e verificações de integridade | **Testado** (números da seção 4) |
+| Pipeline completo com fastembed e Gemini (`gemini-3.5-flash`; o reserva `gemini-3.5-flash-lite` respondeu parte das perguntas) | **Testado** nas 18 perguntas |
+| Ablação dos componentes da recuperação | **Testado** |
+| Modo extrativo (sem LLM) e 16 testes automatizados | **Testado** |
 | Interface Streamlit | **Testado** só com o utilitário de testes do Streamlit (carrega e responde sem erro) |
-| Backend de embeddings **fastembed** (o padrão do projeto) | **Testado** (ablação e avaliação de ponta a ponta abaixo) |
-| Limiar de similaridade 0,45 do fastembed | **Não calibrado.** Medi a distribuição de similaridade (abaixo): nenhuma decisão das 18 perguntas depende dele, então elas não servem para calibrá-lo. Mantive 0,45 |
-| "Busca híbrida é melhor que BM25 sozinho" | **Não confirmada.** Com fastembed o BM25 sozinho continuou com precisão maior que a híbrida (0,79 × 0,75); a híbrida ganha em polaridade (0,76 × 0,62). A precisão é um proxy léxico, que favorece o BM25, e não há variante que compare as duas com o resto do pipeline ligado |
+| Backend LSA | **Implementado, sem resultados publicados.** As execuções com ele usaram uma cópia da base obtida fora do Kaggle e foram descartadas |
+| Limiar de similaridade 0,45 do fastembed | **Não calibrado.** Nenhuma decisão das 18 perguntas depende dele (ver abaixo) |
+| "Busca híbrida é melhor que BM25 sozinho" | **Não confirmada.** BM25 sozinho teve precisão maior (0,79 × 0,75); a híbrida ganhou em polaridade (0,76 × 0,62) |
 | Provedores OpenAI, Anthropic e Ollama | **Implementados, nunca executados** |
-| `scripts/download_data.py` | **Testado.** O `kagglehub` baixou o dataset público (versão 2) sem credenciais. Todas as contagens da seção 4 (42.114 documentos e os números de integridade) saíram iguais às obtidas antes com uma cópia pública no GitHub |
 | Precisão dos padrões de tema | **Não medida** |
-| Fidelidade das respostas geradas | **Conferida à mão em duas respostas**, sem rotulagem sistemática |
+| Fidelidade das respostas geradas | **Conferida à mão em poucas respostas**, sem rotulagem sistemática |
 | Desempenho em perguntas fora das 18 | **Desconhecido** |
 
 As 18 perguntas estão em [`eval/questions.json`](eval/questions.json): doze respondíveis
@@ -334,75 +336,63 @@ As 18 perguntas estão em [`eval/questions.json`](eval/questions.json): doze res
 
 ### Ablação da recuperação (sem LLM)
 
-`eval/ablation.py` começa com busca vetorial pura e liga um componente por vez. Cada célula
-mostra **LSA → fastembed**.
+`eval/ablation.py` começa com busca vetorial pura e liga um componente por vez.
 
 | Variante | Precisão | Polaridade | Redundância (↓) | Temas | Recusas (de 6) |
 |---|---|---|---|---|---|
-| A. Só vetorial (top-k) | 0,63 → 0,71 | 0,64 → 0,82 | 0,73 → 0,67 | 1,0 → 3,1 | 2 → 2 |
-| B. Só BM25 | 0,79 → 0,79 | 0,61 → 0,62 | 0,37 → 0,47 | 2,9 → 3,0 | 2 → 2 |
-| C. Híbrida (RRF) | 0,75 → 0,75 | 0,66 → 0,76 | 0,52 → 0,57 | 1,7 → 3,0 | 2 → 2 |
-| D. C + filtros inferidos | 0,74 → 0,80 | 1,00 → 1,00 | 0,49 → 0,58 | 1,8 → 2,9 | 2 → 2 |
-| E. D + suporte e cobertura IDF | 0,75 → 0,84 | 1,00 → 1,00 | 0,53 → 0,60 | 1,9 → 3,2 | 6 → 6 |
-| F. E + MMR | 0,81 → 0,82 | 1,00 → 1,00 | 0,40 → 0,56 | 2,6 → 3,3 | 6 → 6 |
-| G. Pipeline completo (F + decomposição por tema) | 0,97 → 0,93 | 1,00 → 1,00 | 0,32 → 0,56 | 3,5 → 4,4 | 6 → 6 |
+| A. Só vetorial (top-k) | 0,71 | 0,82 | 0,67 | 3,1 | 2 |
+| B. Só BM25 | 0,79 | 0,62 | 0,47 | 3,0 | 2 |
+| C. Híbrida (RRF) | 0,75 | 0,76 | 0,57 | 3,0 | 2 |
+| D. C + filtros inferidos | 0,80 | 1,00 | 0,58 | 2,9 | 2 |
+| E. D + suporte e cobertura IDF | 0,84 | 1,00 | 0,60 | 3,2 | 6 |
+| F. E + MMR | 0,82 | 1,00 | 0,56 | 3,3 | 6 |
+| G. Pipeline completo (F + decomposição por tema) | 0,93 | 1,00 | 0,56 | 4,4 | 6 |
 
 *Precisão*: fração das evidências que contêm termos do assunto. *Polaridade*: fração das
-evidências com nota coerente com a pergunta. *Redundância*: cosseno médio entre as evidências,
-calculado no espaço de vetores de cada backend; por isso só vale comparar dentro da mesma
-coluna de backend, não LSA com fastembed. *Temas*: temas distintos nas evidências. Relatórios
-completos em [`docs/ablacao.md`](docs/ablacao.md) (fastembed) e
-[`docs/lsa/ablacao.md`](docs/lsa/ablacao.md) (LSA).
+evidências com nota coerente com a pergunta. *Redundância*: cosseno médio entre as evidências.
+*Temas*: temas distintos nas evidências. Relatório em [`docs/ablacao.md`](docs/ablacao.md).
 
 O que a tabela mostra:
 
-- Com o modelo neural, a busca vetorial pura melhora em tudo (A): precisão 0,63 → 0,71,
-  polaridade 0,64 → 0,82 e três temas distintos em vez de um.
-- Sem filtros, de um quarto (fastembed) a um terço (LSA) das evidências de perguntas sobre
-  problemas ou elogios tinha a nota errada para a pergunta (C → D). Com fastembed, os filtros
-  também sobem a precisão (0,75 → 0,80).
-- A verificação de suporte é o que recusa as quatro perguntas de fora do domínio (D → E), nos
-  dois backends. Com fastembed ela também sobe a precisão (0,80 → 0,84).
-- O MMR reduz a repetição entre evidências (E → F); com fastembed o efeito é menor
-  (0,60 → 0,56) e custa um pouco de precisão (0,84 → 0,82).
-- A decomposição por tema dá o maior salto de precisão, nas cinco perguntas amplas (F → G),
-  nos dois backends.
+- Sem filtros, cerca de um quarto das evidências de perguntas sobre problemas ou elogios tinha
+  a nota errada para a pergunta (C, polaridade 0,76). Os filtros corrigem isso e sobem a
+  precisão (0,75 → 0,80).
+- A verificação de suporte é o que recusa as quatro perguntas de fora do domínio (D → E) e
+  também sobe a precisão (0,80 → 0,84).
+- O MMR reduz pouco a repetição (0,60 → 0,56) e custa um pouco de precisão (0,84 → 0,82).
+- A decomposição por tema dá o maior salto de precisão (0,82 → 0,93), concentrado nas cinco
+  perguntas amplas.
 
 O que a tabela **não** permite concluir:
 
 - A polaridade 1,00 a partir de D é efeito direto do filtro, não um achado.
 - O salto de G está inflado: nas perguntas amplas as evidências são escolhidas por padrões de
   tema parecidos com os que medem a precisão.
-- B melhor que C em precisão contraria a justificativa da busca híbrida. Eu atribuía isso à
-  fraqueza do LSA, mas com fastembed o resultado se repetiu (0,79 × 0,75), então não era só
-  isso. Parte pode vir do proxy, que é léxico e premia evidências com a palavra exata; não medi
-  relevância de outro jeito. Em polaridade a híbrida é melhor (0,76 × 0,62), e não há variante
-  que compare BM25 e híbrida com filtros, suporte e MMR ligados.
-- B não usa embeddings, mas mudou um pouco (polaridade 0,61 → 0,62, temas 2,9 → 3,0). Nessa
-  rodada os CSVs vieram do Kaggle, e não da cópia do GitHub; suponho diferença de ordem das
-  linhas (empates no BM25), mas não verifiquei.
+- B melhor que C em precisão contraria a justificativa da busca híbrida. Parte pode vir do
+  proxy, que é léxico e premia evidências com a palavra exata; não medi relevância de outro
+  jeito. Em polaridade a híbrida é melhor (0,76 × 0,62), e não há variante que compare BM25 e
+  híbrida com filtros, suporte e MMR ligados.
+- O ganho do MMR é pequeno nesta configuração; mantê-lo é uma escolha de diversidade, não algo
+  que a tabela demonstre.
 
-### Avaliação de ponta a ponta (+ Gemini)
+### Avaliação de ponta a ponta (com Gemini)
 
-| Métrica | LSA | fastembed |
-|---|---|---|
-| Decisão responder/recusar correta | 18 de 18 | 18 de 18 |
-| Precisão das evidências (mesmo proxy da ablação) | 0,97 | 0,93 |
-| Evidências respeitando os filtros | 100% | 100% |
-| Respostas com citação inexistente | 0 de 12 | 0 de 12 |
-| Respostas sem citação | 0 de 12 | 0 de 12 |
-| Tempo médio por pergunta | cerca de 11 s | cerca de 12 s |
+| Métrica | Resultado |
+|---|---|
+| Decisão responder/recusar correta | 18 de 18 |
+| Precisão das evidências (mesmo proxy da ablação) | 0,93 |
+| Evidências respeitando os filtros | 100% |
+| Respostas com citação inexistente | 0 de 12 |
+| Respostas sem citação | 0 de 12 |
+| Tempo médio por pergunta | cerca de 12 s, quase todo na chamada ao Gemini |
 
-O tempo é quase todo a chamada ao Gemini. Detalhe por pergunta em
-[`docs/avaliacao.md`](docs/avaliacao.md) (fastembed) e
-[`docs/lsa/avaliacao.md`](docs/lsa/avaliacao.md) (LSA).
+Detalhe por pergunta em [`docs/avaliacao.md`](docs/avaliacao.md).
 
-A queda de precisão com fastembed está nas quatro perguntas amplas Q01, Q04, Q07 e Q08 (de 1,00
-para 0,75–0,88). Li as seis evidências reprovadas: todas são relevantes, mas usam palavras que
-o padrão do proxy não tem ("produto não **entregue**", "ainda não **recebemos**", "não
-**corresponde** à descrição", "muito bem **embalado**"). O modelo neural escolhe paráfrases que
-o proxy léxico não reconhece. Não alterei os padrões para não ajustar a métrica ao resultado. Na
-direção oposta, a Q11 (produto diferente do anunciado) subiu de 0,70 para 1,00.
+A precisão fica abaixo de 1,00 nas quatro perguntas amplas Q01, Q04, Q07 e Q08 (entre 0,75 e
+0,88). Li as seis evidências reprovadas: todas são relevantes, mas usam palavras que o padrão do
+proxy não tem ("produto não **entregue**", "ainda não **recebemos**", "não **corresponde** à
+descrição", "muito bem **embalado**"). O modelo neural escolhe paráfrases que o proxy léxico não
+reconhece. Não alterei os padrões para não ajustar a métrica ao resultado.
 
 ### Limiar de similaridade do fastembed
 
@@ -428,28 +418,28 @@ a evidência fala do assunto, e não se ela sustenta a conclusão da resposta.
 ## 8. Exemplos
 
 As respostas às 18 perguntas, com as evidências, estão em
-[`docs/exemplos.md`](docs/exemplos.md) (fastembed) e
-[`docs/lsa/exemplos.md`](docs/lsa/exemplos.md) (LSA). Um trecho da execução com LSA:
+[`docs/exemplos.md`](docs/exemplos.md). Um trecho:
 
 **"Quais são os principais problemas relatados pelos clientes em suas avaliações?"**
 (ampla; filtro inferido: notas 1 a 3; 14.438 avaliações)
 
 ```text
-Os principais problemas relatados concentram-se em falhas de entrega (produtos não recebidos ou
-com atraso), seguidos por demandas de troca, devolução ou cancelamento, e pelo recebimento de
-itens errados ou divergentes do anunciado.
+Os principais problemas relatados pelos clientes envolvem atrasos e não entrega de pedidos,
+envio de produtos errados ou de baixa qualidade, além de falhas no atendimento e cancelamentos
+sem justificativa. [...]
 
-* Produto não recebido e atraso na entrega: Representa a maior parte das queixas por
-  palavras-chave na base filtrada (26,6% para não recebido e 13,1% para atraso/demora). Os
-  clientes relatam expressamente a ausência da entrega do item [R1], [R2] ou insatisfação com a
-  demora e extrapolação do prazo [R3], [R4].
-* Solicitações de troca, devolução, cancelamento ou reembolso: Presente em 12,1% dos casos da
-  base filtrada [...] [R5] [...] [R6].
-* Produto errado ou diferente do anunciado: Representa 8,1% das ocorrências na base filtrada.
-  [...] [R7] [...] [R8].
+- Não entrega e atrasos de envio: Clientes reclamam da falta de recebimento dos produtos,
+  demoras no prazo de entrega e do fato de serem cobrados a avaliar itens que ainda não
+  chegaram [R1] [R2] [R3] [R4]. [...] o tema "Produto não recebido (até a data da avaliação)"
+  representa 26,6% (3.845 avaliações) e "Atraso / demora na entrega" representa 13,1%
+  (1.896 avaliações).
+- Recebimento de produto errado ou divergente: [...] incluindo divergências de cor e tamanho
+  [R6] [R7] [R8]. O tema "Produto errado / diferente do anunciado" soma 8,1% (1.173
+  avaliações) da base filtrada.
+- Qualidade insatisfatória e problemas no pós-venda: [...] [R3] [R7] [...] [R4] [...] [R5].
 
-Limitações: Análise baseada em uma amostra reduzida de depoimentos e estatísticas de
-palavras-chave restritas a avaliações de nota 1 a 3.
+Limitações: A análise reflete uma amostra de 8 avaliações qualitativas e estatísticas de
+palavras-chave restritas a pedidos com notas de 1 a 3.
 ```
 
 **"Qual foi o faturamento da Olist em 2018?"**
@@ -465,7 +455,7 @@ dados transacionais/financeiros agregados, que não estão nos textos das avalia
   um conjunto de perguntas de borda para escolher o valor.
 - **Avaliação pequena e feita por mim.** Falta testar com perguntas de outras pessoas e com
   alguém rotulando relevância e fidelidade.
-- **Temas por palavras-chave.** Cerca de 39% das avaliações não caem em nenhum tema, então os
+- **Temas por palavras-chave.** Cerca de 39% das avaliações (`pct_sem_nenhum_tema` no relatório da base) não caem em nenhum tema, então os
   percentuais são um piso. Negações longe do termo ainda enganam os padrões.
 - **Negação na busca focada.** "Entrega sem problemas" (nota 3) ainda pode aparecer numa
   pergunta sobre problemas de entrega: tem os termos e passa no filtro de nota.

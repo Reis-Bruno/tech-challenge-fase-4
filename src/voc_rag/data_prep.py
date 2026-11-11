@@ -88,6 +88,20 @@ def integrity_checks(reviews: pd.DataFrame, orders: pd.DataFrame, items: pd.Data
     }
 
 
+def _statistics(df: pd.DataFrame) -> dict:
+    """Números da base citados no README, calculados aqui para serem reproduzíveis."""
+    from .themes import theme_matrix
+
+    themes = theme_matrix(df["text"])
+    late = (df["delivery_status"] == "atrasado").to_numpy()
+    return {
+        "nota_media_por_entrega": df.groupby("delivery_status")["review_score"].mean().round(2).to_dict(),
+        "pct_sem_nenhum_tema": round(100 * float((~themes.any(axis=1)).mean()), 1),
+        "atrasados_entregues": int(late.sum()),
+        "pct_atrasados_dizendo_nao_recebi": round(100 * float(themes["nao_recebido"][late].mean()), 1),
+    }
+
+
 def build_documents() -> tuple[pd.DataFrame, dict]:
     reviews = _read("reviews")
     orders = _read("orders")
@@ -193,6 +207,7 @@ def build_documents() -> tuple[pd.DataFrame, dict]:
         period=[df["purchase_date"][df["purchase_date"] != ""].min(), df["purchase_date"].max()],
         top_categories=df["category"].value_counts().head(10).to_dict(),
     )
+    report["statistics"] = _statistics(df)
     return df, report
 
 
