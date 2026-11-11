@@ -2,7 +2,7 @@
 
 Dois backends com a mesma interface:
 
-* ``fastembed`` (padrão): ``paraphrase-multilingual-MiniLM-L12-v2`` em ONNX (quantizado)
+* ``fastembed`` (padrão): ``paraphrase-multilingual-MiniLM-L12-v2`` em ONNX
   via biblioteca *fastembed*. Modelo treinado para similaridade semântica de frases em
   50+ idiomas (inclui PT-BR), 384 dimensões, roda em CPU sem PyTorch.
 * ``lsa``: TF-IDF (uni+bigramas, sem acento) + SVD truncado (Latent Semantic Analysis),

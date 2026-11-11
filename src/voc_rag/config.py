@@ -49,22 +49,24 @@ FALLBACK_MODELS = {
 
 @dataclass
 class RetrievalConfig:
-    """Hiperparâmetros do retriever. Valores justificados no README (seção Decisões técnicas)."""
+    """Parâmetros do retriever (comentados no README, seção de decisões)."""
 
     dense_candidates: int = 60  # candidatos vindos do índice vetorial
     sparse_candidates: int = 60  # candidatos vindos do BM25
-    rrf_k: int = 60  # constante do Reciprocal Rank Fusion (valor padrão da literatura)
+    rrf_k: int = 60  # constante do Reciprocal Rank Fusion (valor do artigo de Cormack et al., 2009)
     final_k: int = 10  # avaliações enviadas ao LLM como evidência
     mmr_lambda: float = 0.7  # 1.0 = só relevância; 0.0 = só diversidade
     min_chars: int = 15  # evidências muito curtas ("ok", "bom") têm pouco valor explicativo
-    # Suficiência de evidência: precisamos de pelo menos `min_evidence` avaliações cuja
-    # similaridade densa passe do limiar do backend E que compartilhem termos com a pergunta.
+    # Suficiência: a resposta só é gerada com pelo menos `min_evidence` avaliações com
+    # suporte. Suporte = compartilhar um termo de conteúdo com a pergunta OU passar do
+    # limiar de similaridade abaixo. O limiar do LSA foi ajustado nas perguntas de teste;
+    # o do fastembed é um valor inicial que ainda não foi calibrado.
     min_evidence: int = 3
     dense_threshold: dict = field(
         default_factory=lambda: {"fastembed": 0.45, "lsa": 0.20}
     )
-    theme_sample: int = 300  # avaliações usadas para estimar frequência de temas
-    # Chaves de ablação (eval/ablation.py). Em produção ficam todas ligadas.
+    theme_sample: int = 300  # vizinhos densos usados nos temas quando o assunto é raro (< 30 menções)
+    # Chaves de ablação (eval/ablation.py). No uso normal ficam todas ligadas.
     sources: str = "hybrid"  # hybrid | dense | bm25
     use_support_check: bool = True  # exige vínculo verificável pergunta-avaliação
     use_coverage: bool = True  # reordenação pela cobertura IDF dos termos da pergunta

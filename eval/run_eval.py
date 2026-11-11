@@ -6,7 +6,8 @@ Métricas:
   pergunta (padrão `relevance` definido manualmente em questions.json). É um proxy
   lexical: subestima relevância de paráfrases, mas é reprodutível sem rótulos humanos.
 * filter_compliance — evidências que respeitam os filtros de metadados (deve ser 100%).
-* citation_validity / uncited — só quando há LLM: citações [R#] válidas e respostas sem citação.
+* answers_with_invalid_citations / answers_without_citation — só fazem sentido com LLM:
+  respostas que citam [R#] inexistente e respostas sem nenhuma citação.
 
 Uso:  python eval/run_eval.py [--provider none|openai|...] [--out docs/avaliacao.md]
 """

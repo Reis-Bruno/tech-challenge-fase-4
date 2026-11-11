@@ -8,8 +8,10 @@ _WS = re.compile(r"\s+")
 _REPEAT_PUNCT = re.compile(r"([!?.,])\1{2,}")
 _TOKEN = re.compile(r"[a-z0-9]+")
 
-# Stopwords curtas e conservadoras: NÃO removemos negações ("não", "nunca", "nada"),
-# porque em avaliações elas invertem o sentido ("não chegou" vs "chegou").
+# Lista curta de stopwords. NÃO inclui negações ("não", "nunca", "nada", "sem"), porque
+# em avaliações elas invertem o sentido ("não chegou" vs "chegou"). Inclui algumas palavras
+# de moldura das perguntas ("clientes", "avaliações", "principais"), que aparecem em quase
+# toda pergunta e não ajudam a distinguir avaliações.
 STOPWORDS = set(
     """a o as os um uma uns umas de da do das dos em no na nos nas por pelo pela pelos pelas
     para pra pro com e ou que se ao aos à às é foi era ser são estar está estão esta este isso

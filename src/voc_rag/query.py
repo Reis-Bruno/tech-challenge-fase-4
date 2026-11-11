@@ -213,9 +213,9 @@ def plan_query(question: str, user_filters: Filters | None = None,
             filters.min_score = filters.max_score = int(m.group(1))
             rules.append(f"'nota {m.group(1)}' -> filtro nota = {m.group(1)}")
         elif filters.min_score is None and filters.max_score is None:
-            # Pedidos de problemas/insatisfação: notas 1–2. Elogios: notas 4–5.
-            # Para "problemas" genéricos (sem 'insatisfeito'/'nota baixa') usamos 1–3,
-            # porque avaliações nota 3 frequentemente relatam problemas parciais.
+            # Pergunta sobre problemas -> notas 1–3 (lendo a base, várias avaliações nota 3
+            # relatam problema parcial). Se a pergunta fala em "insatisfeitos" ou
+            # "nota baixa" -> só 1–2. Pergunta sobre elogios -> notas 4–5.
             if intent == "negativo":
                 strong = _has_any(norm, STRONG_NEGATIVE_CUES)
                 filters.max_score = 2 if strong else 3
@@ -258,8 +258,9 @@ def plan_query(question: str, user_filters: Filters | None = None,
         reason = ("A pergunta exige dados transacionais/financeiros agregados, que não estão "
                   "nos textos das avaliações (base de conhecimento desta solução).")
     elif not (set(tokens) & DOMAIN_TERMS) and not any(t in CATEGORY_ALIASES for t in tokens):
-        # Sem nenhum termo do domínio: candidata a fora de escopo. A decisão final
-        # também considera a força da recuperação (ver retriever.assess_evidence).
+        # Sem nenhum termo do domínio: candidata a fora de escopo. Quem decide é o
+        # retriever, que nesse caso aplica o critério de suporte mais rígido
+        # (cobertura IDF >= 60% dos termos da pergunta e similaridade acima do limiar).
         reason = "Nenhum termo do domínio de e-commerce/avaliações foi identificado na pergunta."
         rules.append("sem termos do domínio -> exigirá evidência forte")
 

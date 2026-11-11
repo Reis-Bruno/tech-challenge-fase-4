@@ -193,8 +193,9 @@ class HybridRetriever:
         trace["candidates_after_dedup"] = len(candidates)
 
         # Suporte = a avaliação compartilha ao menos um termo de CONTEÚDO da pergunta
-        # (ou sinônimo da expansão), ou tem similaridade densa acima do limiar calibrado.
-        # Para perguntas sem termo de domínio exige-se as duas coisas.
+        # (ou sinônimo da expansão), ou tem similaridade densa acima do limiar do backend.
+        # Para perguntas sem termo de domínio o critério é mais rígido: cobertura IDF de
+        # pelo menos 60% dos termos da pergunta E similaridade acima do limiar.
         q_terms = set(plan.core) | ({s for s in stem_tokens(plan.sparse_query)} - set(stem_tokens(plan.original)))
         core = set(plan.core)
         sims_all = self.vectors[candidates] @ qvec if candidates else np.array([])
@@ -232,8 +233,8 @@ class HybridRetriever:
 
         Top-k puro numa pergunta genérica devolve avaliações "parecidas com a pergunta"
         (ex.: textos com a palavra "problema"), não as mais representativas. Aqui, as
-        evidências são escolhidas por tema — proporcional à frequência — e cada uma
-        CONTÉM o tema (casamento por padrão), o que garante rastreabilidade insight→evidência.
+        evidências são escolhidas por tema (a mesma quantidade para cada um dos 4 temas
+        mais frequentes) e cada uma CONTÉM o tema, por casamento com o padrão do tema.
         """
         themes = [t["theme"] for t in pop_stats[:4]]
         trace["subqueries"] = [THEMES[t]["label"] for t in themes]
