@@ -2,6 +2,8 @@
 
 Tech Challenge da Fase 4 — Pós Tech FIAP (IA para Devs)
 
+**Autores:** Bruno Reis e Lucas Sucupira
+
 Solução de RAG (Retrieval-Augmented Generation) que responde perguntas em linguagem natural
 sobre as avaliações dos clientes do Olist. Cada resposta cita as avaliações que a sustentam e,
 sem evidência suficiente, a solução recusa responder.

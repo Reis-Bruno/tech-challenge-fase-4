@@ -4,11 +4,12 @@ O enunciado pede que o vídeo mostre, de forma objetiva: o problema de negócio,
 estratégia do pipeline RAG, como ocorre a recuperação das avaliações, uma demonstração prática,
 exemplos de perguntas, as evidências recuperadas e os principais desafios e decisões técnicas.
 O roteiro abaixo cobre cada item na ordem dos slides. O texto falado completo de cada slide está
-nas notas do apresentador do deck.
+nas notas do apresentador do deck, escrito na primeira pessoa do plural para os dois
+apresentadores, Bruno Reis e Lucas Sucupira.
 
 | Tempo | Slide | Item do enunciado | O que dizer ou mostrar |
 |---|---|---|---|
-| 0:00–0:15 | 1. Capa | — | Apresentação e o que será mostrado. |
+| 0:00–0:15 | 1. Capa | — | Apresentação dos autores (Bruno Reis e Lucas Sucupira) e do que será mostrado. |
 | 0:15–0:50 | 2. Problema de negócio | Problema de negócio | Nota média 4,0 no prazo, 1,94 com atraso, 1,52 sem entrega; o motivo está no texto. Os três casos em que o RAG simples falhou. |
 | 0:50–1:30 | 3. Arquitetura | Arquitetura proposta | Indexação (CSVs do Kaggle → data_prep → embeddings → ChromaDB + BM25) e consulta (plano → recuperação → suficiência → Gemini → validação). |
 | 1:30–2:05 | 4. Base de conhecimento | Estratégia do RAG (base) | 99.224 → 42.114 documentos; uma avaliação por documento; verificação de integridade; negações preservadas; ausentes; metadados. |

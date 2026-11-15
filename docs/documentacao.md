@@ -2,6 +2,8 @@
 
 Tech Challenge da Fase 4 — Pós Tech FIAP (IA para Devs)
 
+**Autores:** Bruno Reis e Lucas Sucupira
+
 Aplicação de RAG (Retrieval-Augmented Generation) sobre as avaliações escritas do
 [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce).
 Você faz uma pergunta em português, a aplicação busca as avaliações relacionadas e gera uma
@@ -153,7 +155,7 @@ mostra as etapas do pipeline com as saídas já executadas.
 1. **Plano de consulta** (`query.py`). Regras extraem a intenção e os filtros (problemas →
    notas 1 a 3; elogios → 4 e 5; ano; categoria; "entregues com atraso"), sinônimos para o
    BM25 e os termos de conteúdo. Sem termo de conteúdo, a pergunta é tratada como ampla.
-   Perguntas sobre faturamento ou número de pedidos são recusadas aqui. Usei regras, e não um
+   Perguntas sobre faturamento ou número de pedidos são recusadas aqui. Usamos regras, e não um
    LLM, para que a mesma pergunta gere sempre o mesmo plano, visível na interface.
 2. **Recuperação** (`retriever.py`). Na pergunta focada: busca vetorial no ChromaDB e BM25 (60
    candidatos cada, com os filtros), fusão por RRF, verificação de suporte, reordenação pela
@@ -243,14 +245,14 @@ sem justificativa. [...]
 
 ## 8. Limitações
 
-- **Avaliação pequena e feita por mim.** As 18 perguntas foram escritas durante o
+- **Avaliação pequena e feita por nós.** As 18 perguntas foram escritas durante o
   desenvolvimento e usadas para ajustar regras; os números estão otimistas. A precisão mede se
   a evidência fala do assunto, não se sustenta a conclusão.
 - **Limiar de similaridade não calibrado.** O valor de 0,45 não decide nenhuma das 18
   perguntas; calibrá-lo exige perguntas novas, de borda.
 - **Temas por palavras-chave.** Cerca de 39% das avaliações não caem em nenhum tema, então os
   percentuais são um piso.
-- **Regras de interpretação** cobrem as formulações que previ; fora delas, os filtros podem
+- **Regras de interpretação** cobrem as formulações que previmos; fora delas, os filtros podem
   ser aplicados manualmente na interface.
 - **Não testados:** os provedores OpenAI, Anthropic e Ollama estão implementados, mas nunca
   foram executados. O backend LSA existe como alternativa sem HuggingFace, sem resultados
