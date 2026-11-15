@@ -73,6 +73,21 @@ os números otimistas.
 ⚙️ **Tecnologias:** Python • pandas • fastembed • ChromaDB • rank-bm25 • Google Gemini •
 Streamlit • pytest
 
+## Como executar
+
+Python 3.10+. Passo a passo completo, incluindo Windows, em [docs/documentacao.md](docs/documentacao.md#3-como-rodar).
+
+```bash
+pip install -r requirements.txt
+python scripts/download_data.py                                  # base do Kaggle
+PYTHONPATH=src python -m voc_rag.data_prep                       # base de conhecimento
+PYTHONPATH=src python -m voc_rag.indexing --backend fastembed    # embeddings e índices
+streamlit run app/streamlit_app.py                               # interface
+```
+
+Para gerar respostas com o Gemini, grave `GEMINI_API_KEY=sua-chave` no arquivo `.env`. Sem chave,
+a aplicação mostra as evidências organizadas por tema, sem texto gerado.
+
 ## Documentação
 
 - [Instalação, arquitetura, decisões e limitações](docs/documentacao.md)

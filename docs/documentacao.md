@@ -166,6 +166,15 @@ mostra as etapas do pipeline com as saídas já executadas.
    nenhuma avaliação cobre 60% dos seus termos (perguntas de fora do domínio) ou se há menos de
    três avaliações com suporte.
 
+**Como os metadados melhoram a recuperação.** Os filtros entram na própria consulta (`where`
+do ChromaDB e máscara no BM25), não como pós-filtro. Na ablação (seção 7), sem filtros cerca de
+um quarto das evidências de perguntas sobre problemas ou elogios tinha nota incompatível com a
+pergunta (polaridade 0,76); com os filtros, a polaridade vai a 1,00 e a precisão sobe de 0,75
+para 0,80. Eles também tornam respondíveis perguntas que o texto sozinho não resolve, como
+"quais temas aparecem nas avaliações de pedidos entregues com atraso?", que usa o atraso
+calculado a partir das datas do pedido, e fazem as frequências de temas se referirem à
+população certa (por exemplo, só às avaliações de nota 1 a 3).
+
 | Escolha | Motivo |
 |---|---|
 | Embeddings `paraphrase-multilingual-MiniLM-L12-v2` (fastembed) | suporta português e roda em CPU, sem custo por chamada |
